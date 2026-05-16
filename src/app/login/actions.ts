@@ -10,20 +10,30 @@ export async function loginWithEmail(formData: FormData) {
     return { error: 'Email is required' }
   }
 
-  // Expect format: i230001@nu.edu.pk or similar
-  const match = email.match(/^([a-z])(\d{2})(\d{4})@.*?nu\.edu\.pk$/i)
-  if (!match) {
-    return { error: 'Invalid academic email. Must be in format i230001@nu.edu.pk' }
+  // Extract the part before @
+  const prefix = email.split('@')[0].toLowerCase()
+  
+  // Extract all letters and digits from the prefix
+  const letters = prefix.replace(/[^a-z]/g, '')
+  const digits = prefix.replace(/[^0-9]/g, '')
+  
+  if (digits.length < 6 || letters.length === 0) {
+    return { error: 'Invalid academic email. Must contain batch year, campus letter, and ID.' }
   }
 
-  // Construct roll number: 23I-0001
-  const batch = match[2]
-  const letter = match[1].toUpperCase()
-  const id = match[3]
-  const rollNumber = `${batch}${letter}-${id}`
+  // Assuming batch is first 2 digits, id is last 4 digits, letter is the first letter found
+  const batch = digits.substring(0, 2)
+  const id = digits.substring(digits.length - 4)
+  const letter = letters[0].toUpperCase()
+  
+  const rollWithHyphen = `${batch}${letter}-${id}`
+  const rollWithoutHyphen = `${batch}${letter}${id}`
 
   try {
-    const res = await pool.query('SELECT * FROM students WHERE roll_number = $1', [rollNumber])
+    const res = await pool.query(
+      'SELECT * FROM students WHERE UPPER(roll_number) = $1 OR UPPER(roll_number) = $2 OR REPLACE(UPPER(roll_number), \'-\', \'\') = $2', 
+      [rollWithHyphen, rollWithoutHyphen]
+    )
     if (res.rows.length === 0) {
       return { error: 'No student found with this academic email' }
     }

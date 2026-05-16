@@ -64,7 +64,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-8 text-[12px] text-text-muted">
-          For demo purposes, use <strong className="text-text-slate">i230001@nu.edu.pk</strong> to log in as a seeded student.
+          For demo purposes, use <strong className="text-text-slate">p240529@pwr.nu.edu.pk</strong> to log in as your seeded student.
         </p>
       </div>
     </div>
