@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Container } from '../components/layout/Container';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -14,7 +13,6 @@ export default function UpdatesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Form state
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formTitle, setFormTitle] = useState('');
@@ -50,42 +48,19 @@ export default function UpdatesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-
     try {
-      if (editingId) {
-        // PUT update
-        const res = await fetch(`/api/updates/${editingId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: formTitle,
-            content: formContent,
-            type: formType,
-          }),
-        });
-        const data = await res.json();
-        if (data.error) setError(data.error);
-        else {
-          fetchUpdates();
-          resetForm();
-        }
-      } else {
-        // POST new update
-        const res = await fetch('/api/updates', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: formTitle,
-            content: formContent,
-            type: formType,
-          }),
-        });
-        const data = await res.json();
-        if (data.error) setError(data.error);
-        else {
-          fetchUpdates();
-          resetForm();
-        }
+      const url = editingId ? `/api/updates/${editingId}` : '/api/updates';
+      const method = editingId ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: formTitle, content: formContent, type: formType }),
+      });
+      const data = await res.json();
+      if (data.error) setError(data.error);
+      else {
+        fetchUpdates();
+        resetForm();
       }
     } catch {
       setError('Failed to save update');
@@ -99,13 +74,11 @@ export default function UpdatesPage() {
     setFormType(update.type);
     setEditingId(update.id);
     setShowForm(true);
-    // Scroll to top where form will appear
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this update?')) return;
-
     try {
       const res = await fetch(`/api/updates/${id}`, { method: 'DELETE' });
       if (res.status === 204) {
@@ -121,42 +94,42 @@ export default function UpdatesPage() {
 
   const getBadgeVariant = (type: string) => {
     const map: Record<string, string> = {
-      academic: 'lecture',
+      academic: 'default',
       schedule: 'cancelled',
       exam: 'exam',
-      general: 'holiday',
+      general: 'event',
     };
-    return map[type] || 'lecture';
+    return map[type] || 'event';
   };
 
   return (
-    <Container className="py-16">
+    <>
       <PageHeader 
         title="Live Updates" 
         subtitle="University announcements and schedule changes" 
       />
 
       <div className="mb-10 flex justify-between items-center">
-        <h2 className="text-xl font-bold text-white">All Updates</h2>
+        <h2 className="font-headline-md text-[20px] text-on-surface">All Updates</h2>
         {!showForm && (
-          <Button onClick={() => setShowForm(true)}>+ New Update</Button>
+          <Button onClick={() => setShowForm(true)} variant="primary">+ New Update</Button>
         )}
       </div>
 
       {error && (
-        <div role="alert" className="mb-8 bg-error/10 border border-error/20 text-error p-4 rounded-lg">
+        <div role="alert" className="mb-8 bg-error-container/10 border border-error/20 text-error p-4 rounded-lg font-body-md">
           {error}
         </div>
       )}
 
       {showForm && (
-        <Card className="mb-12 animate-fade-in-up border-white/20">
-          <h3 className="text-xl font-bold text-white mb-4">
+        <Card className="mb-12 animate-fade-in-up">
+          <h3 className="font-headline-md text-[20px] text-on-surface mb-4">
             {editingId ? 'Edit Update' : 'Create New Update'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-zinc-400 mb-1">Title</label>
+              <label htmlFor="title" className="block font-label-md text-on-surface-variant mb-1">Title</label>
               <Input
                 id="title"
                 value={formTitle}
@@ -166,10 +139,10 @@ export default function UpdatesPage() {
               />
             </div>
             <div>
-              <label htmlFor="content" className="block text-sm font-medium text-zinc-400 mb-1">Content</label>
+              <label htmlFor="content" className="block font-label-md text-on-surface-variant mb-1">Content</label>
               <textarea
                 id="content"
-                className="w-full rounded-lg py-3 px-4 bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/8 transition-colors min-h-[120px]"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded py-2 px-3 font-body-md text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-tertiary-container focus:ring-1 focus:ring-tertiary-container/50 min-h-[120px]"
                 value={formContent}
                 onChange={(e) => setFormContent(e.target.value)}
                 placeholder="Enter update content"
@@ -177,24 +150,24 @@ export default function UpdatesPage() {
               />
             </div>
             <div>
-              <label htmlFor="type" className="block text-sm font-medium text-zinc-400 mb-1">Type</label>
+              <label htmlFor="type" className="block font-label-md text-on-surface-variant mb-1">Type</label>
               <select
                 id="type"
-                className="w-full rounded-lg py-3 px-4 bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/8 transition-colors appearance-none"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded py-2 px-3 font-body-md text-on-surface focus:outline-none focus:border-tertiary-container focus:ring-1 focus:ring-tertiary-container/50 appearance-none"
                 value={formType}
                 onChange={(e) => setFormType(e.target.value)}
               >
-                <option value="general" className="bg-surface-2">General</option>
-                <option value="academic" className="bg-surface-2">Academic</option>
-                <option value="schedule" className="bg-surface-2">Schedule</option>
-                <option value="exam" className="bg-surface-2">Exam</option>
+                <option value="general" className="bg-surface">General</option>
+                <option value="academic" className="bg-surface">Academic</option>
+                <option value="schedule" className="bg-surface">Schedule</option>
+                <option value="exam" className="bg-surface">Exam</option>
               </select>
             </div>
             <div className="flex gap-3 justify-end pt-4">
               <Button type="button" variant="ghost" onClick={resetForm}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" variant="primary" disabled={submitting}>
                 {submitting ? 'Saving...' : editingId ? 'Save Changes' : 'Publish'}
               </Button>
             </div>
@@ -210,40 +183,42 @@ export default function UpdatesPage() {
       )}
 
       {!loading && updates.length === 0 && (
-        <Card className="text-center py-12">
-          <span className="text-4xl mb-4 block">📢</span>
-          <p className="text-zinc-400 text-lg">No updates yet. Create one to get started!</p>
+        <Card className="text-center py-12 flex flex-col items-center">
+          <span className="material-symbols-outlined text-[48px] text-outline mb-4">notifications_off</span>
+          <p className="text-on-surface-variant font-body-md">No updates yet. Create one to get started!</p>
         </Card>
       )}
 
       <div className="space-y-6 stagger">
         {updates.map((update) => (
-          <Card key={update.id} className="animate-fade-in-up">
+          <Card key={update.id} className="animate-fade-in-up relative border-l-4" style={{
+            borderLeftColor: update.type === 'exam' ? 'var(--color-tertiary)' : 
+                             update.type === 'schedule' ? 'var(--color-error)' : 
+                             update.type === 'academic' ? 'var(--color-primary)' : 'var(--color-outline-variant)'
+          }}>
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-center gap-3">
-                <Badge variant={getBadgeVariant(update.type) as any} className="capitalize">
-                  {update.type}
-                </Badge>
-                <h3 className="text-lg font-bold text-white leading-tight">{update.title}</h3>
+                <Badge variant={getBadgeVariant(update.type) as any}>{update.type}</Badge>
+                <h3 className="font-headline-md text-[18px] text-on-surface leading-tight">{update.title}</h3>
               </div>
-              <span className="text-sm text-zinc-500 font-mono">
+              <span className="font-label-sm text-outline">
                 {new Date(update.created_at).toLocaleDateString('en-US', {
                   month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 })}
               </span>
             </div>
-            <p className="text-zinc-400 mb-6">{update.content}</p>
+            <p className="text-on-surface-variant font-body-md mb-6">{update.content}</p>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={() => handleEdit(update)}>
                 Edit
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => handleDelete(update.id)} className="hover:text-error hover:bg-error/10">
+              <Button variant="danger" size="sm" onClick={() => handleDelete(update.id)}>
                 Delete
               </Button>
             </div>
           </Card>
         ))}
       </div>
-    </Container>
+    </>
   );
 }

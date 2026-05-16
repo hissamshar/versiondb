@@ -1,36 +1,20 @@
 import React from 'react';
 
-type SkeletonProps = React.HTMLAttributes<HTMLDivElement> & {
-  width?: string;
-  height?: string;
-};
-
-export const Skeleton = ({ className = '', width, height, ...props }: SkeletonProps) => {
+export function SkeletonCard() {
   return (
-    <div
-      className={`skeleton ${className}`}
-      style={{ width, height }}
-      {...props}
-    />
+    <div className="bg-surface-container rounded-lg border border-outline-variant/20 p-5 w-full h-[200px] flex flex-col justify-between">
+      <div className="flex justify-between items-center mb-4">
+        <div className="w-24 h-6 skeleton"></div>
+        <div className="w-16 h-4 skeleton"></div>
+      </div>
+      <div className="space-y-3">
+        <div className="w-3/4 h-8 skeleton"></div>
+        <div className="w-1/2 h-4 skeleton"></div>
+      </div>
+      <div className="mt-auto flex gap-3">
+        <div className="w-24 h-8 skeleton"></div>
+        <div className="w-24 h-8 skeleton"></div>
+      </div>
+    </div>
   );
-};
-
-export const SkeletonText = ({ lines = 3 }: { lines?: number }) => (
-  <div className="space-y-3">
-    {Array.from({ length: lines }).map((_, i) => (
-      <Skeleton
-        key={i}
-        height="1rem"
-        className={i === lines - 1 ? 'w-2/3' : 'w-full'}
-      />
-    ))}
-  </div>
-);
-
-export const SkeletonCard = () => (
-  <div className="rounded-xl glass p-6 space-y-4">
-    <Skeleton className="h-6 w-1/3" />
-    <SkeletonText lines={2} />
-    <Skeleton className="h-10 w-full mt-4 rounded-lg" />
-  </div>
-);
+}

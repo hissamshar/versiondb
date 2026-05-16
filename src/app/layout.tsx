@@ -1,22 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "./components/layout/Navbar";
+import { Sidebar, TopAppBar, BottomNav } from "./components/layout/Navigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "EasyTimetable — University Schedule Manager",
-  description:
-    "View your class timetable, exam schedule, academic calendar, and live updates. Built for FAST-NUCES students.",
+  title: "EasyTimetable — Student Dashboard",
+  description: "Academic Tech Intelligence Portal",
 };
 
 export default function RootLayout({
@@ -27,14 +26,24 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${jetbrainsMono.variable} h-full antialiased dark`}
     >
-      <body className="min-h-full flex flex-col">
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-purple-600 focus:text-white">Skip to content</a>
-        <Navbar />
-        <main id="main-content" className="flex-1 pt-16">
-          {children}
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
+      </head>
+      <body className="bg-background text-on-surface flex min-h-screen font-body-md">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-primary focus:text-on-primary">Skip to content</a>
+        
+        <Sidebar />
+        
+        <main id="main-content" className="flex-1 flex flex-col min-w-0 pb-24 md:pb-0">
+          <TopAppBar />
+          <div className="flex-1 overflow-y-auto p-[16px] md:p-[32px] space-y-6 max-w-[1280px] mx-auto w-full">
+            {children}
+          </div>
         </main>
+
+        <BottomNav />
       </body>
     </html>
   );

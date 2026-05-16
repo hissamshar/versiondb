@@ -1,102 +1,101 @@
 import React from 'react';
 import pool from '@/lib/db';
-import { RollLookup } from './components/RollLookup';
-import { LiveUpdatesBanner } from './components/LiveUpdatesBanner';
-import { Container } from './components/layout/Container';
 import { Card } from './components/ui/Card';
-import Link from 'next/link';
+import { Badge } from './components/ui/Badge';
+import { Button } from './components/ui/Button';
 
-async function getStats() {
+async function getUpdates() {
   try {
-    const studentsRes = await pool.query('SELECT COUNT(*) FROM students');
-    const coursesRes = await pool.query('SELECT COUNT(*) FROM courses');
-    const facultyRes = await pool.query('SELECT COUNT(*) FROM faculty');
-    
-    return {
-      students: parseInt(studentsRes.rows[0].count, 10),
-      courses: parseInt(coursesRes.rows[0].count, 10),
-      faculty: parseInt(facultyRes.rows[0].count, 10),
-    };
-  } catch (err) {
-    console.error('Failed to fetch stats', err);
-    return { students: 0, courses: 0, faculty: 0 };
+    const res = await pool.query('SELECT * FROM live_updates ORDER BY created_at DESC LIMIT 3');
+    return res.rows;
+  } catch {
+    return [];
   }
 }
 
 export default async function Home() {
-  const stats = await getStats();
+  const updates = await getUpdates();
 
   return (
     <>
-      <LiveUpdatesBanner />
-      <Container className="py-16 lg:py-24">
-        {/* Hero Section */}
-        <section className="text-center mb-24 max-w-3xl mx-auto stagger">
-          <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight animate-fade-in-up">
-            Your Schedule, <br />
-            <span className="gradient-text">Simplified.</span>
-          </h1>
-          <p className="text-xl text-zinc-400 mb-10 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
-            The all-in-one timetable, exam, and event manager for FAST-NUCES. Look up your schedule instantly.
-          </p>
-          <div className="flex justify-center animate-fade-in-up" style={{ animationDelay: '120ms' }}>
-            <RollLookup targetPage="timetable" />
+      {/* Top Bento Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
+        {/* Current Class (Live) */}
+        <Card className="lg:col-span-2 relative overflow-hidden flex flex-col justify-between min-h-[200px]">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+          
+          <div className="flex justify-between items-start mb-4 z-10">
+            <div className="flex items-center gap-3">
+              <Badge variant="live">LIVE NOW</Badge>
+              <span className="font-label-md text-on-surface-variant">Until 11:30 AM</span>
+            </div>
+            <span className="font-label-md text-outline">CS301</span>
           </div>
-        </section>
 
-        {/* Stats Section */}
-        <section className="mb-24">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 stagger">
-            <Card className="text-center animate-fade-in-up" style={{ animationDelay: '0ms' }}>
-              <div className="text-4xl font-bold text-white mb-2">{stats.students.toLocaleString()}</div>
-              <div className="text-zinc-400 font-medium">Active Students</div>
-            </Card>
-            <Card className="text-center animate-fade-in-up" style={{ animationDelay: '60ms' }}>
-              <div className="text-4xl font-bold text-white mb-2">{stats.courses.toLocaleString()}</div>
-              <div className="text-zinc-400 font-medium">Courses Offered</div>
-            </Card>
-            <Card className="text-center animate-fade-in-up" style={{ animationDelay: '120ms' }}>
-              <div className="text-4xl font-bold text-white mb-2">{stats.faculty.toLocaleString()}</div>
-              <div className="text-zinc-400 font-medium">Faculty Members</div>
-            </Card>
+          <div className="z-10">
+            <h2 className="font-headline-lg-mobile md:font-headline-lg text-on-surface mb-2">Database Management Systems</h2>
+            <div className="flex flex-wrap gap-4 mt-4">
+              <div className="flex items-center text-on-surface-variant font-label-md">
+                <span className="material-symbols-outlined mr-2 text-[18px]">location_on</span>
+                Lecture Hall A
+              </div>
+              <div className="flex items-center text-on-surface-variant font-label-md">
+                <span className="material-symbols-outlined mr-2 text-[18px]">person</span>
+                Dr. E. Turing
+              </div>
+            </div>
           </div>
-        </section>
 
-        {/* Quick Links */}
-        <section>
-          <h2 className="text-2xl font-bold text-white mb-6">Quick Links</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <Link href="/timetable">
-              <Card glow className="h-full flex flex-col justify-center items-center text-center">
-                <span className="text-4xl mb-4">📅</span>
-                <h3 className="text-lg font-bold text-white mb-2">Class Timetable</h3>
-                <p className="text-sm text-zinc-400">View your weekly class schedule, rooms, and faculty.</p>
-              </Card>
-            </Link>
-            <Link href="/exams">
-              <Card glow className="h-full flex flex-col justify-center items-center text-center">
-                <span className="text-4xl mb-4">📝</span>
-                <h3 className="text-lg font-bold text-white mb-2">Exam Schedule</h3>
-                <p className="text-sm text-zinc-400">Find your sessionals and final exam datesheets.</p>
-              </Card>
-            </Link>
-            <Link href="/calendar">
-              <Card glow className="h-full flex flex-col justify-center items-center text-center">
-                <span className="text-4xl mb-4">🗓️</span>
-                <h3 className="text-lg font-bold text-white mb-2">Academic Calendar</h3>
-                <p className="text-sm text-zinc-400">Stay updated on important semester events and holidays.</p>
-              </Card>
-            </Link>
-            <Link href="/updates">
-              <Card glow className="h-full flex flex-col justify-center items-center text-center">
-                <span className="text-4xl mb-4">📢</span>
-                <h3 className="text-lg font-bold text-white mb-2">Live Updates</h3>
-                <p className="text-sm text-zinc-400">Read the latest announcements and schedule changes.</p>
-              </Card>
-            </Link>
+          <div className="mt-6 flex gap-3 z-10">
+            <Button variant="primary">Join Virtual Lab</Button>
+            <Button variant="ghost">View Materials</Button>
           </div>
-        </section>
-      </Container>
+        </Card>
+
+        {/* AI Announcements Feed */}
+        <Card className="flex flex-col">
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-outline-variant/20">
+            <h3 className="font-headline-md text-[20px] text-on-surface flex items-center gap-2">
+              <span className="material-symbols-outlined text-tertiary-container">auto_awesome</span>
+              AI Briefing
+            </h3>
+            <span className="font-label-sm text-on-surface-variant">Real-time</span>
+          </div>
+          
+          <div className="space-y-3 overflow-y-auto flex-1 pr-1">
+            {updates.length === 0 ? (
+              <div className="text-on-surface-variant text-center py-4 font-body-md">No recent updates</div>
+            ) : updates.map(update => (
+              <div key={update.id} className={`bg-surface-container-high/50 rounded-lg p-3 border-l-2 relative ${update.type === 'exam' ? 'border-tertiary' : update.type === 'academic' ? 'border-primary' : 'border-outline-variant'}`}>
+                <p className="font-body-md text-on-surface mb-1">{update.title}</p>
+                <p className="font-label-sm text-on-surface-variant">{update.type} • {new Date(update.created_at).toLocaleDateString()}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      {/* Quick Links Section (replaces full timetable grid on home to keep it simple, since Timetable is a separate page) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        <Card hoverable className="flex flex-row items-center gap-4 cursor-pointer">
+          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            <span className="material-symbols-outlined">calendar_view_week</span>
+          </div>
+          <div>
+            <h3 className="font-headline-md text-[18px] text-on-surface">View Full Timetable</h3>
+            <p className="font-body-md text-on-surface-variant">Check your upcoming classes and venues</p>
+          </div>
+        </Card>
+        <Card hoverable className="flex flex-row items-center gap-4 cursor-pointer">
+          <div className="w-12 h-12 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+            <span className="material-symbols-outlined">assignment</span>
+          </div>
+          <div>
+            <h3 className="font-headline-md text-[18px] text-on-surface">Exam Datesheet</h3>
+            <p className="font-body-md text-on-surface-variant">Prepare for your upcoming finals</p>
+          </div>
+        </Card>
+      </div>
     </>
   );
 }

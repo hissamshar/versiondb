@@ -4,88 +4,69 @@ type TimetableGridProps = {
   schedule: any[];
 };
 
-export const TimetableGrid = ({ schedule }: TimetableGridProps) => {
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const startHour = 8;
-  const endHour = 17;
-  
-  // Create an array of 30-min slots from startHour to endHour
-  const timeSlots: string[] = [];
-  for (let h = startHour; h < endHour; h++) {
-    timeSlots.push(`${h.toString().padStart(2, '0')}:00:00`);
-    timeSlots.push(`${h.toString().padStart(2, '0')}:30:00`);
-  }
+export function TimetableGrid({ schedule }: TimetableGridProps) {
+  // Convert 08:00:00 to purely 08:00 for mapping
+  const parseTime = (t: string) => t.substring(0, 5);
 
-  // Very simple hash function to assign colors based on course code
-  const getCourseColor = (courseCode: string) => {
-    const colors = [
-      'bg-blue-500/20 border-blue-500/30 text-blue-300',
-      'bg-purple-500/20 border-purple-500/30 text-purple-300',
-      'bg-emerald-500/20 border-emerald-500/30 text-emerald-300',
-      'bg-rose-500/20 border-rose-500/30 text-rose-300',
-      'bg-amber-500/20 border-amber-500/30 text-amber-300',
-      'bg-cyan-500/20 border-cyan-500/30 text-cyan-300',
-    ];
-    let hash = 0;
-    for (let i = 0; i < courseCode.length; i++) {
-      hash = courseCode.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
-  };
-
-  const getSlotForDayTime = (day: string, time: string) => {
-    return schedule.find(s => 
-      s.day_of_week.toLowerCase().startsWith(day.substring(0, 3).toLowerCase()) && 
-      s.start_time === time
-    );
-  };
-
-  const formatTime = (timeStr: string) => {
-    const [h, m] = timeStr.split(':');
-    const hour = parseInt(h);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const h12 = hour % 12 || 12;
-    return `${h12}:${m} ${ampm}`;
-  };
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const times = [
+    '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+    '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+    '16:00', '16:30'
+  ];
 
   return (
-    <div className="w-full overflow-x-auto pb-4 rounded-xl border border-white/10 glass">
-      <table className="w-full text-left border-collapse min-w-[800px]">
-        <thead>
-          <tr className="border-b border-white/10 bg-white/5">
-            <th scope="col" className="p-3 sticky left-0 z-20 bg-surface-2 border-r border-white/10 w-24">Time</th>
-            {days.map(day => (
-              <th scope="col" key={day} className="p-3 font-semibold text-white text-center w-[18%] border-r border-white/5 last:border-0">{day}</th>
+    <div className="bg-surface-container rounded-xl border border-outline-variant/20 overflow-hidden">
+      <div className="p-4 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-high">
+        <h3 className="font-headline-md text-[20px] text-on-surface">Weekly Schedule</h3>
+      </div>
+      
+      <div className="overflow-x-auto">
+        <div className="min-w-[800px] p-4">
+          
+          {/* Header Row */}
+          <div className="grid grid-cols-6 gap-2 mb-2 font-label-md text-on-surface-variant text-center border-b border-outline-variant/20 pb-2">
+            <div className="text-left pl-2">Time</div>
+            {days.map(d => (
+              <div key={d}>{d}</div>
             ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/5">
-          {timeSlots.map(time => {
-            const hasAnyClasses = days.some(day => getSlotForDayTime(day, time));
-            
-            return (
-              <tr key={time} className="hover:bg-white/2 transition-colors">
-                <th scope="row" className="p-3 sticky left-0 z-10 bg-surface-1 border-r border-white/10 font-mono text-xs text-zinc-400 whitespace-nowrap">
-                  {formatTime(time)}
-                </th>
-                {days.map(day => {
-                  const slot = getSlotForDayTime(day, time);
+          </div>
+
+          {/* Time Rows */}
+          {times.filter((t, idx) => idx % 2 === 0).map((time) => (
+            <div key={time} className="grid grid-cols-6 gap-2 mb-2 relative">
+              <div className="font-label-sm text-on-surface-variant text-left pl-2 pt-2">{time}</div>
+              
+              {days.map((day) => {
+                // Find class that starts at this hour or half-hour block.
+                // For simplicity in this non-CSS grid display, we'll just check if a class starts in this hour block.
+                const slotClass = schedule.find(c => c.day_of_week.startsWith(day) && parseTime(c.start_time).startsWith(time.substring(0,2)));
+                
+                if (slotClass) {
+                  const isLab = slotClass.course_name.toLowerCase().includes('lab');
+                  const bgAccent = isLab ? 'border-primary-container bg-primary-container/10' : 'border-tertiary-container bg-surface-container-high';
                   return (
-                    <td key={`${day}-${time}`} className="p-2 border-r border-white/5 last:border-0 text-center relative h-16">
-                      {slot && (
-                        <div className={`absolute inset-1 p-2 rounded-lg border flex flex-col justify-center items-center text-xs overflow-hidden ${getCourseColor(slot.course_code)}`}>
-                          <span className="font-bold truncate w-full">{slot.course_code}</span>
-                          <span className="opacity-70 mt-0.5">{slot.room_code || 'TBA'}</span>
-                        </div>
-                      )}
-                    </td>
+                    <div key={`${day}-${time}`} className={`p-2 rounded border-l-2 ${bgAccent}`}>
+                      <div className="font-label-md text-on-surface leading-tight">{slotClass.course_name}</div>
+                      <div className="font-label-sm text-on-surface-variant mt-1">{slotClass.room_name || 'TBD'}</div>
+                      <div className="font-label-sm text-outline mt-0.5">{parseTime(slotClass.start_time)} - {parseTime(slotClass.end_time)}</div>
+                    </div>
                   );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                }
+                
+                return (
+                  <div key={`${day}-${time}`} className="bg-surface-container-highest p-2 rounded border-l-2 border-primary border-dashed opacity-50 relative group">
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-surface-container-highest/80 backdrop-blur-sm rounded">
+                      <span className="font-label-sm text-on-surface">Free Slot</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+        </div>
+      </div>
     </div>
   );
-};
+}

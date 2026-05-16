@@ -1,6 +1,4 @@
 import React from 'react';
-import { Card } from './ui/Card';
-import { Badge } from './ui/Badge';
 
 type ExamCardProps = {
   courseName: string;
@@ -9,52 +7,38 @@ type ExamCardProps = {
   time: string;
   room: string;
   duration: string;
-  type: 'midterm' | 'final' | string;
+  type: string;
 };
 
-export const ExamCard = ({ courseName, courseCode, date, time, room, duration, type }: ExamCardProps) => {
-  const isMidterm = type.toLowerCase().includes('mid') || type.toLowerCase().includes('sessional');
-  const borderColor = isMidterm ? 'border-l-purple-500' : 'border-l-error';
-  const badgeVariant = isMidterm ? 'lecture' : 'exam';
-
-  const formattedDate = new Date(date).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
-
+export function ExamCard({ courseName, courseCode, date, time, room, duration, type }: ExamCardProps) {
+  const isFinal = type.toLowerCase().includes('final');
+  const accentColor = isFinal ? 'border-error' : 'border-tertiary';
+  
   return (
-    <Card 
-      glow 
-      className={`border-l-[3px] ${borderColor} hover:-translate-y-0.5 transition-transform duration-250`}
-    >
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-lg font-bold text-white mb-1 leading-tight">{courseName}</h3>
-          <p className="text-zinc-400 font-mono text-sm">{courseCode}</p>
-        </div>
-        <Badge variant={badgeVariant} className="capitalize ml-2 shrink-0">{type}</Badge>
+    <div className={`bg-surface-container rounded-lg border-l-4 ${accentColor} border-t border-r border-b border-outline-variant/20 p-5 flex flex-col h-full hover:bg-surface-variant transition-colors`}>
+      <div className="flex justify-between items-start mb-3">
+        <span className="font-label-sm text-outline px-2 py-1 bg-surface-variant rounded">{courseCode}</span>
+        <span className={`font-label-sm font-bold uppercase tracking-wider ${isFinal ? 'text-error' : 'text-tertiary'}`}>
+          {type}
+        </span>
       </div>
-
-      <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm mt-4">
-        <div className="flex items-center text-zinc-300">
-          <span className="mr-2 opacity-60">📅</span>
-          <span>{formattedDate}</span>
+      
+      <h3 className="font-headline-md text-[18px] text-on-surface mb-4 leading-tight">{courseName}</h3>
+      
+      <div className="mt-auto space-y-2">
+        <div className="flex items-center text-on-surface-variant font-label-md">
+          <span className="material-symbols-outlined mr-2 text-[16px]">calendar_today</span>
+          {new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
         </div>
-        <div className="flex items-center text-zinc-300">
-          <span className="mr-2 opacity-60">⏰</span>
-          <span className="font-mono">{time}</span>
+        <div className="flex items-center text-on-surface-variant font-label-md">
+          <span className="material-symbols-outlined mr-2 text-[16px]">schedule</span>
+          {time} <span className="ml-1 opacity-50">({duration})</span>
         </div>
-        <div className="flex items-center text-zinc-300">
-          <span className="mr-2 opacity-60">📍</span>
-          <span>{room || 'TBA'}</span>
-        </div>
-        <div className="flex items-center text-zinc-300">
-          <span className="mr-2 opacity-60">⏳</span>
-          <span>{duration}</span>
+        <div className="flex items-center text-on-surface-variant font-label-md">
+          <span className="material-symbols-outlined mr-2 text-[16px]">location_on</span>
+          {room || 'TBD'}
         </div>
       </div>
-    </Card>
+    </div>
   );
-};
+}

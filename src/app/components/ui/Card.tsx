@@ -1,24 +1,16 @@
 import React from 'react';
 
 type CardProps = React.HTMLAttributes<HTMLDivElement> & {
-  glow?: boolean;
+  hoverable?: boolean;
 };
 
-export const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className = '', glow = false, children, ...props }, ref) => {
-    const baseStyles = 'rounded-xl glass p-6 transition-all duration-300 hover:border-white/15';
-    const glowStyles = glow ? 'hover:shadow-[0_0_30px_rgba(168,85,247,0.15)]' : '';
-
-    return (
-      <div
-        ref={ref}
-        className={`${baseStyles} ${glowStyles} ${className}`}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  }
-);
-
-Card.displayName = 'Card';
+export function Card({ className = '', children, hoverable = false, ...props }: CardProps) {
+  const baseStyle = "bg-surface-container rounded-lg border border-outline-variant/20 p-5 flex flex-col h-full";
+  const hoverStyle = hoverable ? "transition-all duration-300 hover:border-outline-variant/50 hover:shadow-[0_0_15px_rgba(173,198,255,0.05)] hover:-translate-y-0.5" : "";
+  
+  return (
+    <div className={`${baseStyle} ${hoverStyle} ${className}`} {...props}>
+      {children}
+    </div>
+  );
+}

@@ -2,7 +2,6 @@
 
 import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Container } from '../components/layout/Container';
 import { PageHeader } from '../components/layout/PageHeader';
 import { RollLookup } from '../components/RollLookup';
 import { ExamCard } from '../components/ExamCard';
@@ -23,9 +22,8 @@ function ExamsContent() {
     fetch(`/api/exams?roll=${encodeURIComponent(roll)}`)
       .then(res => res.json())
       .then(data => {
-        if (data.error) {
-          setError(data.error);
-        } else {
+        if (data.error) setError(data.error);
+        else {
           setStudent(data.student);
           setExams(data.exams || []);
         }
@@ -37,7 +35,6 @@ function ExamsContent() {
       });
   }, [roll]);
 
-  // Group exams
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
@@ -58,27 +55,29 @@ function ExamsContent() {
       )}
 
       {error && (
-        <div role="alert" className="bg-error/10 border border-error/20 text-error p-4 rounded-lg">
+        <div role="alert" className="bg-error-container/10 border border-error/20 text-error p-4 rounded-lg font-body-md">
           {error}
         </div>
       )}
 
       {!roll && !loading && !error && (
-        <Card className="text-center py-12">
-          <span className="text-4xl mb-4 block">📭</span>
-          <p className="text-zinc-400 text-lg">Enter your roll number above to view your exams.</p>
+        <Card className="text-center py-12 flex flex-col items-center justify-center">
+          <span className="material-symbols-outlined text-[48px] text-outline mb-4">assignment</span>
+          <p className="text-on-surface-variant font-body-md text-lg">Enter your roll number above to view your exams.</p>
         </Card>
       )}
 
       {student && !loading && (
         <div className="animate-fade-in-up">
-          <Card className="mb-8 flex items-center gap-6">
-            <div className="hidden sm:flex h-16 w-16 bg-white/5 rounded-full items-center justify-center text-2xl">📝</div>
+          <Card className="mb-8 flex flex-row items-center gap-6">
+            <div className="hidden sm:flex h-16 w-16 bg-surface-variant rounded-full items-center justify-center text-primary">
+               <span className="material-symbols-outlined text-[32px]">person</span>
+            </div>
             <div>
-              <h2 className="text-2xl font-bold text-white">{student.name}</h2>
-              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2 text-sm text-zinc-400">
-                <span><strong className="text-zinc-300">Roll:</strong> {student.roll_number}</span>
-                <span><strong className="text-zinc-300">Total Exams:</strong> {exams.length}</span>
+              <h2 className="font-headline-md text-on-surface">{student.name}</h2>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2 font-label-md text-on-surface-variant">
+                <span><strong className="text-on-surface">Roll:</strong> {student.roll_number}</span>
+                <span><strong className="text-on-surface">Total Exams:</strong> {exams.length}</span>
               </div>
             </div>
           </Card>
@@ -87,7 +86,7 @@ function ExamsContent() {
             <div className="space-y-12">
               {upcomingExams.length > 0 && (
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-4 border-b border-white/10 pb-2">Upcoming Exams</h3>
+                  <h3 className="font-headline-md text-[20px] text-on-surface mb-4 border-b border-outline-variant/20 pb-2">Upcoming Exams</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {upcomingExams.map(exam => (
                       <ExamCard
@@ -107,7 +106,7 @@ function ExamsContent() {
               
               {pastExams.length > 0 && (
                 <div>
-                  <h3 className="text-xl font-bold text-zinc-500 mb-4 border-b border-white/10 pb-2">Past Exams</h3>
+                  <h3 className="font-headline-md text-[20px] text-outline mb-4 border-b border-outline-variant/20 pb-2">Past Exams</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-60">
                     {pastExams.map(exam => (
                       <ExamCard
@@ -127,7 +126,7 @@ function ExamsContent() {
             </div>
           ) : (
             <Card className="text-center py-12">
-              <p className="text-zinc-400">No exams scheduled for this student.</p>
+              <p className="text-on-surface-variant font-body-md">No exams scheduled for this student.</p>
             </Card>
           )}
         </div>
@@ -138,16 +137,14 @@ function ExamsContent() {
 
 export default function ExamsPage() {
   return (
-    <Container className="py-16">
+    <>
       <PageHeader 
         title="Exam Schedule" 
         subtitle="View your personalized datesheet and seating plan." 
       />
-      <Suspense fallback={
-        <div aria-busy="true"><SkeletonCard /></div>
-      }>
+      <Suspense fallback={<div aria-busy="true"><SkeletonCard /></div>}>
         <ExamsContent />
       </Suspense>
-    </Container>
+    </>
   );
 }
