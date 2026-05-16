@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import RollLookup from '../components/RollLookup';
 
@@ -25,6 +25,14 @@ interface Student {
 }
 
 export default function TimetablePage() {
+  return (
+    <Suspense fallback={<div className="loading"><div className="loading-spinner" /><p>Loading...</p></div>}>
+      <TimetableContent />
+    </Suspense>
+  );
+}
+
+function TimetableContent() {
   const searchParams = useSearchParams();
   const roll = searchParams.get('roll');
   const [student, setStudent] = useState<Student | null>(null);

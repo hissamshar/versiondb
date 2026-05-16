@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import RollLookup from '../components/RollLookup';
 import ExamCard from '../components/ExamCard';
@@ -24,6 +24,14 @@ interface Student {
 }
 
 export default function ExamsPage() {
+  return (
+    <Suspense fallback={<div className="loading"><div className="loading-spinner" /><p>Loading...</p></div>}>
+      <ExamsContent />
+    </Suspense>
+  );
+}
+
+function ExamsContent() {
   const searchParams = useSearchParams();
   const roll = searchParams.get('roll');
   const [student, setStudent] = useState<Student | null>(null);
