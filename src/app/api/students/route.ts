@@ -1,9 +1,22 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import pool from '@/lib/db';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const roll = searchParams.get('roll');
+  let roll = searchParams.get('roll');
+
+  // If roll=self, resolve from auth cookie
+  if (roll === 'self') {
+    const cookieStore = await cookies();
+    const authCookie = cookieStore.get('auth');
+    if (authCookie) {
+      try {
+        const parsed = JSON.parse(authCookie.value);
+        roll = parsed.roll;
+      } catch { /* fallback */ }
+    }
+  }
 
   if (!roll) {
     return NextResponse.json({ error: 'Roll number is required' }, { status: 400 });
@@ -40,9 +53,20 @@ export async function GET(request: Request) {
       [student.student_id]
     );
 
+    // Get enrolled courses (distinct)
+    const coursesRes = await pool.query(
+      `SELECT DISTINCT c.course_id, c.course_code, c.course_name
+       FROM course_enrollment ce
+       JOIN courses c ON ce.course_id = c.course_id
+       WHERE ce.student_id = $1
+       ORDER BY c.course_name ASC`,
+      [student.student_id]
+    );
+
     return NextResponse.json({
       student,
       schedule: scheduleRes.rows,
+      courses: coursesRes.rows,
     });
   } catch (error) {
     console.error('Database error:', error);

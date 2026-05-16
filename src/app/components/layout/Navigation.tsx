@@ -22,10 +22,11 @@ export function Sidebar() {
   const pathname = usePathname();
   const user = useAuth();
   
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || pathname === '/timer') return null;
 
   const navItems = [
     { href: '/', icon: 'dashboard', label: 'Dashboard' },
+    { href: '/timer', icon: 'timer', label: 'Study Timer' },
     { href: '/timetable', icon: 'calendar_view_week', label: 'Timetable' },
     { href: '/exams', icon: 'assignment', label: 'Exams' },
     { href: '/calendar', icon: 'event', label: 'Calendar' },
@@ -96,7 +97,7 @@ export function Sidebar() {
 export function TopAppBar() {
   const pathname = usePathname();
   const user = useAuth();
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || pathname === '/timer') return null;
 
   const getPageTitle = () => {
     switch (pathname) {
@@ -154,13 +155,13 @@ export function TopAppBar() {
 export function BottomNav() {
   const pathname = usePathname();
   
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || pathname === '/timer') return null;
 
   const navItems = [
     { href: '/', icon: 'dashboard', label: 'Home' },
+    { href: '/timer', icon: 'timer', label: 'Timer' },
     { href: '/timetable', icon: 'calendar_view_week', label: 'Schedule' },
     { href: '/exams', icon: 'assignment', label: 'Exams' },
-    { href: '/calendar', icon: 'event', label: 'Calendar' },
     { href: '/updates', icon: 'campaign', label: 'Updates' },
   ];
 
