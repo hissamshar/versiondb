@@ -7,6 +7,8 @@ import { usePathname } from 'next/navigation';
 export function Sidebar() {
   const pathname = usePathname();
   
+  if (pathname === '/login') return null;
+
   const navItems = [
     { href: '/timetable', icon: 'calendar_view_week', label: 'Schedule' },
     { href: '/exams', icon: 'assignment', label: 'Exams' },
@@ -44,14 +46,23 @@ export function Sidebar() {
           <span className="material-symbols-outlined mr-2 text-[18px]">smart_toy</span>
           Ask Groq AI
         </button>
-        <div className="flex items-center gap-3 px-2 pt-4 border-t border-outline-variant/20">
-          <div className="w-8 h-8 rounded-full border border-outline-variant/30 bg-surface-variant flex items-center justify-center text-on-surface-variant font-bold text-[12px]">
+        <div className="flex items-center gap-3 px-2 pt-4 border-t border-gray-200">
+          <div className="w-8 h-8 rounded-full bg-bg-slate flex items-center justify-center text-text-slate font-bold text-[12px]">
             AC
           </div>
-          <div>
-            <p className="font-label-md font-bold text-on-surface">Alex Chen</p>
-            <p className="font-label-sm text-[10px] text-on-surface-variant">CS - Yr 3</p>
+          <div className="flex-1">
+            <p className="font-heading font-bold text-text-dark text-[14px]">Alex Chen</p>
+            <p className="font-primary text-[10px] text-text-muted">CS - Yr 3</p>
           </div>
+          <form action="/login" method="POST" onSubmit={async (e) => {
+            e.preventDefault();
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/login';
+          }}>
+            <button type="submit" className="text-text-muted hover:text-primary transition-colors">
+              <span className="material-symbols-outlined text-[18px]">logout</span>
+            </button>
+          </form>
         </div>
       </div>
     </nav>
@@ -59,6 +70,9 @@ export function Sidebar() {
 }
 
 export function TopAppBar() {
+  const pathname = usePathname();
+  if (pathname === '/login') return null;
+
   return (
     <header className="bg-surface text-primary top-0 sticky border-b border-outline-variant/30 flex justify-between items-center w-full px-[16px] md:px-[32px] py-[8px] z-30">
       <div className="flex items-center md:hidden">
@@ -101,6 +115,8 @@ export function TopAppBar() {
 export function BottomNav() {
   const pathname = usePathname();
   
+  if (pathname === '/login') return null;
+
   const navItems = [
     { href: '/timetable', icon: 'calendar_view_week', label: 'Schedule' },
     { href: '/exams', icon: 'assignment', label: 'Exams' },
