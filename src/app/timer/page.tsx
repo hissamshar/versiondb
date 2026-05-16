@@ -191,15 +191,14 @@ export default function TimerPage() {
         {/* Session Mode Cards */}
         <div className="space-y-2 mb-6">
           {(Object.entries(MODES) as [SessionMode, typeof MODES.focus][]).map(([key, m]) => (
-            <button
+            <div
               key={key}
               onClick={() => !isRunning && switchMode(key)}
-              disabled={isRunning}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${
+              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left cursor-pointer ${
                 mode === key 
                   ? 'bg-white/20 backdrop-blur-md border border-white/30 shadow-lg' 
                   : 'bg-black/20 backdrop-blur-sm border border-white/10 hover:bg-white/10'
-              } ${isRunning && mode !== key ? 'opacity-40' : ''}`}
+              } ${isRunning && mode !== key ? 'opacity-40 pointer-events-none' : ''}`}
             >
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white`} style={{ backgroundColor: m.color }}>
                 <span className="material-symbols-outlined text-[16px]">{m.icon}</span>
@@ -215,7 +214,7 @@ export default function TimerPage() {
               >
                 <span className="material-symbols-outlined text-[14px]">settings</span>
               </button>
-            </button>
+            </div>
           ))}
         </div>
 
