@@ -1,0 +1,301 @@
+import React from 'react';
+import { cookies } from 'next/headers';
+import pool from '@/lib/db';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+
+async function getAnalyticsData(studentId: number) {
+  try {
+    // Current month overview
+    const monthStatsRes = await pool.query(
+      `SELECT 
+         COALESCE(SUM(duration_minutes), 0) as total_minutes,
+         COUNT(*) as total_sessions
+       FROM study_sessions
+       WHERE student_id = $1 
+         AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)`,
+      [studentId]
+    );
+
+    // Study time by course
+    const courseStatsRes = await pool.query(
+      `SELECT 
+         c.course_name,
+         c.course_code,
+         COALESCE(SUM(ss.duration_minutes), 0) as minutes
+       FROM study_sessions ss
+       JOIN courses c ON ss.course_id = c.course_id
+       WHERE ss.student_id = $1 
+         AND date_trunc('month', ss.created_at) = date_trunc('month', CURRENT_DATE)
+         AND ss.session_type = 'focus'
+       GROUP BY c.course_id, c.course_name, c.course_code
+       ORDER BY minutes DESC`,
+      [studentId]
+    );
+
+    // Daily distribution for current month
+    const dailyStatsRes = await pool.query(
+      `SELECT 
+         EXTRACT(DAY FROM created_at)::int as day,
+         COALESCE(SUM(duration_minutes), 0) as minutes
+       FROM study_sessions
+       WHERE student_id = $1 
+         AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)
+         AND session_type = 'focus'
+       GROUP BY EXTRACT(DAY FROM created_at)
+       ORDER BY day ASC`,
+      [studentId]
+    );
+
+    return {
+      monthStats: monthStatsRes.rows[0],
+      courseStats: courseStatsRes.rows,
+      dailyStats: dailyStatsRes.rows,
+    };
+  } catch (err) {
+    console.error('Analytics fetch error:', err);
+    return null;
+  }
+}
+
+export default async function AnalyticsPage() {
+  const cookieStore = await cookies();
+  const authCookie = cookieStore.get('auth');
+  
+  let studentId = 0;
+  if (authCookie) {
+    try {
+      studentId = JSON.parse(authCookie.value).id;
+    } catch { /* fallback */ }
+  }
+
+  const data = studentId ? await getAnalyticsData(studentId) : null;
+  
+  const totalMinutes = parseInt(data?.monthStats?.total_minutes || '0');
+  const hoursStudied = Math.floor(totalMinutes / 60);
+  const totalSessions = parseInt(data?.monthStats?.total_sessions || '0');
+
+  const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay(); // 0 is Sun
+
+  // Generate calendar grid
+  const calendarGrid = [];
+  let currentDay = 1;
+  for (let i = 0; i < 6; i++) {
+    const week = [];
+    for (let j = 0; j < 7; j++) {
+      if (i === 0 && j < firstDayOfMonth) {
+        week.push(null);
+      } else if (currentDay <= daysInMonth) {
+        const dayData = data?.dailyStats.find(d => d.day === currentDay);
+        week.push({
+          day: currentDay,
+          minutes: dayData ? parseInt(dayData.minutes) : 0
+        });
+        currentDay++;
+      } else {
+        week.push(null);
+      }
+    }
+    calendarGrid.push(week);
+    if (currentDay > daysInMonth) break;
+  }
+
+  // Course colors
+  const colors = ['#2663ed', '#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ec4899'];
+
+  return (
+    <div className="space-y-6">
+      {/* Top Banner */}
+      <div className="bg-gradient-to-r from-[#8b5cf6] via-[#a855f7] to-[#ec4899] rounded-2xl p-6 md:p-8 text-white shadow-md animate-fade-in-up">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-[24px] md:text-[28px] font-bold font-heading">Monthly Overview</h1>
+            <p className="text-white/80 text-[14px]">Track your progress and achievements</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[16px]">schedule</span>
+              <span className="text-[13px] font-medium">{hoursStudied}h studied</span>
+            </div>
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[16px]">task_alt</span>
+              <span className="text-[13px] font-medium">{totalSessions} sessions</span>
+            </div>
+            <div className="bg-white text-text-dark rounded-lg px-4 py-1.5 text-[13px] font-bold shadow-sm">
+              {currentMonth}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4-Card Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
+        <Card className="!p-5">
+          <div className="flex items-center gap-2 mb-3 text-red">
+            <span className="material-symbols-outlined text-[18px]">event_busy</span>
+            <h3 className="text-[13px] font-bold text-text-dark">Total Deadlines</h3>
+          </div>
+          <p className="text-[32px] font-bold text-text-dark font-heading leading-none mb-2">0</p>
+          <p className="text-[11px] text-text-muted leading-snug">No deadlines yet. Add a small milestone to stay on track.</p>
+        </Card>
+        <Card className="!p-5">
+          <div className="flex items-center gap-2 mb-3 text-primary">
+            <span className="material-symbols-outlined text-[18px]">target</span>
+            <h3 className="text-[13px] font-bold text-text-dark">Study Goals</h3>
+          </div>
+          <p className="text-[32px] font-bold text-text-dark font-heading leading-none mb-2">0</p>
+          <p className="text-[11px] text-text-muted leading-snug">No goals yet. Set one tiny goal for this week to get momentum.</p>
+        </Card>
+        <Card className="!p-5">
+          <div className="flex items-center gap-2 mb-3 text-indigo">
+            <span className="material-symbols-outlined text-[18px]">menu_book</span>
+            <h3 className="text-[13px] font-bold text-text-dark">Courses Tracked</h3>
+          </div>
+          <p className="text-[32px] font-bold text-text-dark font-heading leading-none mb-2">{data?.courseStats?.length || 0}</p>
+          <p className="text-[11px] text-text-muted leading-snug">Courses you have studied this month using the timer.</p>
+        </Card>
+        <Card className="!p-5">
+          <div className="flex items-center gap-2 mb-3 text-orange">
+            <span className="material-symbols-outlined text-[18px]">group</span>
+            <h3 className="text-[13px] font-bold text-text-dark">New Connections</h3>
+          </div>
+          <p className="text-[32px] font-bold text-text-dark font-heading leading-none mb-2">0</p>
+          <p className="text-[11px] text-text-muted leading-snug">Invite a study buddy. Accountability boosts success.</p>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        {/* Study Time by Course - Donut Chart */}
+        <Card className="flex flex-col h-full">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h2 className="text-[16px] font-bold text-text-dark font-heading">Study Time by Course</h2>
+              <p className="text-[12px] text-text-muted">Time spent studying each course this month</p>
+            </div>
+            <div className="text-right">
+              <Badge variant="info">Total: {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m</Badge>
+            </div>
+          </div>
+
+          {!data?.courseStats || data.courseStats.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-10 text-text-muted">
+              <span className="material-symbols-outlined text-[48px] text-text-subdued mb-2">donut_large</span>
+              <p className="text-[13px]">No course study data yet this month.</p>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-8 py-4">
+              {/* Simple SVG Donut Chart */}
+              <div className="relative w-48 h-48">
+                <svg viewBox="0 0 100 100" className="transform -rotate-90 w-full h-full">
+                  {data.courseStats.reduce((acc, course, i) => {
+                    if (totalMinutes === 0) return acc;
+                    const percentage = (parseInt(course.minutes) / totalMinutes) * 100;
+                    const strokeDasharray = `${percentage} ${100 - percentage}`;
+                    const element = (
+                      <circle
+                        key={course.course_code}
+                        cx="50" cy="50" r="40"
+                        fill="transparent"
+                        stroke={colors[i % colors.length]}
+                        strokeWidth="15"
+                        strokeDasharray={strokeDasharray}
+                        strokeDashoffset={`-${acc.offset}`}
+                        className="transition-all duration-500 hover:opacity-80"
+                      />
+                    );
+                    acc.elements.push(element);
+                    acc.offset += percentage;
+                    return acc;
+                  }, { elements: [] as React.ReactNode[], offset: 0 }).elements}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[20px] font-bold text-text-dark leading-none">{Math.floor(totalMinutes / 60)}h</span>
+                  <span className="text-[11px] text-text-muted uppercase font-semibold">Total</span>
+                </div>
+              </div>
+
+              {/* Legend */}
+              <div className="flex flex-col gap-3 w-full sm:w-auto">
+                {data.courseStats.map((course, i) => {
+                  const mins = parseInt(course.minutes);
+                  const perc = totalMinutes > 0 ? Math.round((mins / totalMinutes) * 100) : 0;
+                  return (
+                    <div key={course.course_code} className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: colors[i % colors.length] }} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-bold text-text-dark truncate leading-tight" title={course.course_name}>
+                          {course.course_code}
+                        </p>
+                        <p className="text-[11px] text-text-muted">
+                          {Math.floor(mins / 60)}h {mins % 60}m ({perc}%)
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Pomodoro Sessions Calendar */}
+        <Card className="flex flex-col h-full">
+          <div className="mb-6">
+            <h2 className="text-[16px] font-bold text-text-dark font-heading">Pomodoro Sessions</h2>
+            <p className="text-[12px] text-text-muted">Daily study time distribution</p>
+          </div>
+
+          <div className="w-full overflow-x-auto pb-2">
+            <div className="min-w-[400px]">
+              <div className="grid grid-cols-7 gap-2 mb-2">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                  <div key={day} className="text-center text-[11px] font-semibold text-text-muted uppercase">
+                    {day}
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                {calendarGrid.map((week, i) => (
+                  <div key={i} className="grid grid-cols-7 gap-2">
+                    {week.map((dayObj, j) => {
+                      if (!dayObj) return <div key={`empty-${j}`} className="aspect-square rounded-lg bg-transparent" />;
+                      
+                      // Calculate opacity based on minutes studied (max 4 hours = 240 mins)
+                      const intensity = Math.min(dayObj.minutes / 240, 1);
+                      const isToday = dayObj.day === new Date().getDate() && new Date().getMonth() === new Date().getMonth();
+                      
+                      return (
+                        <div 
+                          key={dayObj.day}
+                          className={`aspect-square rounded-lg flex flex-col items-center justify-center relative border group transition-colors
+                            ${isToday ? 'border-primary ring-2 ring-primary/20' : 'border-border'}
+                            ${dayObj.minutes > 0 ? 'bg-primary' : 'bg-bg-slate'}
+                          `}
+                          style={{
+                            backgroundColor: dayObj.minutes > 0 ? `rgba(38, 99, 237, ${Math.max(0.2, intensity)})` : undefined,
+                            borderColor: dayObj.minutes > 0 ? `rgba(38, 99, 237, ${Math.min(1, intensity + 0.3)})` : undefined,
+                          }}
+                        >
+                          <span className={`text-[12px] font-medium z-10 ${dayObj.minutes > 120 ? 'text-white' : 'text-text-slate'}`}>
+                            {dayObj.day}
+                          </span>
+                          
+                          {/* Tooltip */}
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-20 w-max bg-gray-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap shadow-xl">
+                            Day {dayObj.day}: {dayObj.minutes > 0 ? `${Math.floor(dayObj.minutes / 60)}h ${dayObj.minutes % 60}m` : 'No sessions'}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}

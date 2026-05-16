@@ -31,6 +31,7 @@ export function Sidebar() {
     { href: '/exams', icon: 'assignment', label: 'Exams' },
     { href: '/calendar', icon: 'event', label: 'Calendar' },
     { href: '/updates', icon: 'campaign', label: 'Updates' },
+    { href: '/analytics', icon: 'monitoring', label: 'Analytics' },
   ];
 
   const initials = user?.name
@@ -162,7 +163,7 @@ export function BottomNav() {
     { href: '/timer', icon: 'timer', label: 'Timer' },
     { href: '/timetable', icon: 'calendar_view_week', label: 'Schedule' },
     { href: '/exams', icon: 'assignment', label: 'Exams' },
-    { href: '/updates', icon: 'campaign', label: 'Updates' },
+    { href: '/analytics', icon: 'monitoring', label: 'Stats' },
   ];
 
   return (
