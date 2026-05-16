@@ -5,8 +5,8 @@ type CardProps = React.HTMLAttributes<HTMLDivElement> & {
 };
 
 export function Card({ className = '', children, hoverable = false, ...props }: CardProps) {
-  const baseStyle = "bg-surface-container rounded-lg border border-outline-variant/20 p-5 flex flex-col h-full";
-  const hoverStyle = hoverable ? "transition-all duration-300 hover:border-outline-variant/50 hover:shadow-[0_0_15px_rgba(173,198,255,0.05)] hover:-translate-y-0.5" : "";
+  const baseStyle = "bg-bg-card rounded-xl border border-border p-5 flex flex-col";
+  const hoverStyle = hoverable ? "transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer" : "";
   
   return (
     <div className={`${baseStyle} ${hoverStyle} ${className}`} {...props}>

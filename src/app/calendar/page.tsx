@@ -8,7 +8,7 @@ async function getCalendarEvents() {
   try {
     const res = await pool.query('SELECT * FROM academic_calendar ORDER BY event_date ASC');
     return res.rows;
-  } catch (err) {
+  } catch {
     return [];
   }
 }
@@ -17,7 +17,7 @@ export default async function CalendarPage() {
   const events = await getCalendarEvents();
 
   const grouped: Record<string, any[]> = {};
-  events.forEach(evt => {
+  events.forEach((evt: any) => {
     const date = new Date(evt.event_date);
     const month = date.toLocaleString('default', { month: 'long', year: 'numeric' });
     if (!grouped[month]) grouped[month] = [];
@@ -26,10 +26,10 @@ export default async function CalendarPage() {
 
   const getBadgeVariant = (type: string) => {
     const t = type.toLowerCase();
-    if (t.includes('exam')) return 'exam';
-    if (t.includes('holiday')) return 'cancelled';
-    if (t.includes('class') || t.includes('lecture')) return 'default';
-    return 'event';
+    if (t.includes('exam')) return 'exam' as const;
+    if (t.includes('holiday')) return 'cancelled' as const;
+    if (t.includes('class') || t.includes('lecture')) return 'default' as const;
+    return 'event' as const;
   };
 
   return (
@@ -40,26 +40,36 @@ export default async function CalendarPage() {
       />
 
       {events.length === 0 ? (
-        <Card className="text-center py-12">
-          <p className="text-on-surface-variant font-body-md">No events found in the calendar.</p>
+        <Card className="text-center py-12 animate-fade-in-up">
+          <span className="material-symbols-outlined text-[48px] text-text-subdued mb-3 block">event</span>
+          <p className="text-text-muted text-[14px]">No events found in the calendar.</p>
         </Card>
       ) : (
-        <div className="space-y-12 animate-fade-in-up">
+        <div className="space-y-8 animate-fade-in-up stagger">
           {Object.keys(grouped).map(month => (
             <section key={month}>
-              <h2 className="font-headline-md text-[20px] text-on-surface mb-6 border-b border-outline-variant/20 pb-2">{month}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {grouped[month].map(evt => {
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-[16px] font-bold text-text-dark font-heading">{month}</h2>
+                <Badge variant="event">{grouped[month].length} events</Badge>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {grouped[month].map((evt: any) => {
                   const date = new Date(evt.event_date);
                   return (
-                    <Card key={evt.event_id} className="flex flex-row items-center gap-6 p-4 hover:-translate-y-0.5 transition-transform cursor-default">
-                      <div className="flex flex-col items-center justify-center min-w-[60px] bg-surface-variant rounded-lg py-2">
-                        <span className="font-label-sm text-outline uppercase">{date.toLocaleString('default', { month: 'short' })}</span>
-                        <span className="font-headline-md text-[24px] text-on-surface leading-none">{date.getDate()}</span>
+                    <Card key={evt.event_id} className="flex-row items-center gap-4 !p-4 hover:-translate-y-0.5 transition-transform cursor-default">
+                      <div className="flex flex-col items-center justify-center min-w-[48px] bg-bg-slate rounded-lg py-2 px-1">
+                        <span className="text-[10px] text-text-muted uppercase leading-tight">
+                          {date.toLocaleString('default', { month: 'short' })}
+                        </span>
+                        <span className="text-[20px] font-bold text-text-dark leading-none">
+                          {date.getDate()}
+                        </span>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-headline-md text-[16px] text-on-surface">{evt.description}</h3>
-                        <p className="font-label-md text-on-surface-variant mt-1">{evt.event_day} • Week {evt.week}</p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-[14px] font-semibold text-text-dark">{evt.description}</h3>
+                        <p className="text-[12px] text-text-muted mt-0.5">
+                          {evt.event_day} • Week {evt.week}
+                        </p>
                       </div>
                       <Badge variant={getBadgeVariant(evt.event_type)} className="hidden sm:flex shrink-0">
                         {evt.event_type}

@@ -21,7 +21,6 @@ export async function loginWithEmail(formData: FormData) {
     return { error: 'Invalid academic email. Must contain batch year, campus letter, and ID.' }
   }
 
-  // Assuming batch is first 2 digits, id is last 4 digits, letter is the first letter found
   const batch = digits.substring(0, 2)
   const id = digits.substring(digits.length - 4)
   const letter = letters[0].toUpperCase()
@@ -40,16 +39,34 @@ export async function loginWithEmail(formData: FormData) {
 
     const student = res.rows[0]
     
-    // Set a simple cookie session (In production, use JWT or NextAuth)
-    const cookieStore = await cookies()
-    cookieStore.set('auth', JSON.stringify({
+    const sessionData = JSON.stringify({
       id: student.student_id,
       roll: student.roll_number,
-      name: student.name
-    }), {
+      name: student.name,
+      program: student.program,
+      batch: student.batch_year,
+      section: student.section,
+    })
+    
+    const cookieStore = await cookies()
+    
+    // httpOnly cookie for server-side auth check
+    cookieStore.set('auth', sessionData, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/'
+    })
+    
+    // Readable cookie for client-side user display (name/roll only)
+    cookieStore.set('user_info', JSON.stringify({
+      name: student.name,
+      roll: student.roll_number,
+      program: student.program,
+    }), {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7,
       path: '/'
     })
 
@@ -64,5 +81,6 @@ export async function loginWithEmail(formData: FormData) {
 export async function logout() {
   const cookieStore = await cookies()
   cookieStore.delete('auth')
+  cookieStore.delete('user_info')
   redirect('/login')
 }

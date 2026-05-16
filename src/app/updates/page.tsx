@@ -6,7 +6,6 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { SkeletonCard } from '../components/ui/Skeleton';
 
 export default function UpdatesPage() {
   const [updates, setUpdates] = useState<any[]>([]);
@@ -106,30 +105,33 @@ export default function UpdatesPage() {
     <>
       <PageHeader 
         title="Live Updates" 
-        subtitle="University announcements and schedule changes" 
+        subtitle="University announcements and schedule changes." 
       />
 
-      <div className="mb-10 flex justify-between items-center">
-        <h2 className="font-headline-md text-[20px] text-on-surface">All Updates</h2>
+      <div className="mb-6 flex justify-between items-center">
+        <h2 className="text-[16px] font-bold text-text-dark font-heading">All Updates</h2>
         {!showForm && (
-          <Button onClick={() => setShowForm(true)} variant="primary">+ New Update</Button>
+          <Button onClick={() => setShowForm(true)} variant="primary" size="sm">
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            New Update
+          </Button>
         )}
       </div>
 
       {error && (
-        <div role="alert" className="mb-8 bg-error-container/10 border border-error/20 text-error p-4 rounded-lg font-body-md">
+        <div role="alert" className="mb-6 bg-red-light border border-red/20 text-red p-3 rounded-lg text-[13px]">
           {error}
         </div>
       )}
 
       {showForm && (
-        <Card className="mb-12 animate-fade-in-up">
-          <h3 className="font-headline-md text-[20px] text-on-surface mb-4">
+        <Card className="mb-6 animate-fade-in-up">
+          <h3 className="text-[16px] font-bold text-text-dark mb-4 font-heading">
             {editingId ? 'Edit Update' : 'Create New Update'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="title" className="block font-label-md text-on-surface-variant mb-1">Title</label>
+              <label htmlFor="title" className="block text-[12px] font-semibold text-text-slate mb-1">Title</label>
               <Input
                 id="title"
                 value={formTitle}
@@ -139,10 +141,10 @@ export default function UpdatesPage() {
               />
             </div>
             <div>
-              <label htmlFor="content" className="block font-label-md text-on-surface-variant mb-1">Content</label>
+              <label htmlFor="content" className="block text-[12px] font-semibold text-text-slate mb-1">Content</label>
               <textarea
                 id="content"
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded py-2 px-3 font-body-md text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-tertiary-container focus:ring-1 focus:ring-tertiary-container/50 min-h-[120px]"
+                className="w-full bg-bg-white border border-border rounded-lg py-2.5 px-3 text-[13px] text-text-primary placeholder-text-subdued focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all min-h-[100px] resize-y"
                 value={formContent}
                 onChange={(e) => setFormContent(e.target.value)}
                 placeholder="Enter update content"
@@ -150,23 +152,21 @@ export default function UpdatesPage() {
               />
             </div>
             <div>
-              <label htmlFor="type" className="block font-label-md text-on-surface-variant mb-1">Type</label>
+              <label htmlFor="type" className="block text-[12px] font-semibold text-text-slate mb-1">Category</label>
               <select
                 id="type"
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded py-2 px-3 font-body-md text-on-surface focus:outline-none focus:border-tertiary-container focus:ring-1 focus:ring-tertiary-container/50 appearance-none"
+                className="w-full bg-bg-white border border-border rounded-lg py-2.5 px-3 text-[13px] text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none"
                 value={formType}
                 onChange={(e) => setFormType(e.target.value)}
               >
-                <option value="general" className="bg-surface">General</option>
-                <option value="academic" className="bg-surface">Academic</option>
-                <option value="schedule" className="bg-surface">Schedule</option>
-                <option value="exam" className="bg-surface">Exam</option>
+                <option value="general">General</option>
+                <option value="academic">Academic</option>
+                <option value="schedule">Schedule</option>
+                <option value="exam">Exam</option>
               </select>
             </div>
-            <div className="flex gap-3 justify-end pt-4">
-              <Button type="button" variant="ghost" onClick={resetForm}>
-                Cancel
-              </Button>
+            <div className="flex gap-3 justify-end pt-2">
+              <Button type="button" variant="ghost" onClick={resetForm}>Cancel</Button>
               <Button type="submit" variant="primary" disabled={submitting}>
                 {submitting ? 'Saving...' : editingId ? 'Save Changes' : 'Publish'}
               </Button>
@@ -176,43 +176,50 @@ export default function UpdatesPage() {
       )}
 
       {loading && (
-        <div aria-busy="true" className="space-y-6">
-          <SkeletonCard />
-          <SkeletonCard />
+        <div className="space-y-3">
+          {[1, 2].map(i => (
+            <div key={i} className="bg-bg-card rounded-xl border border-border p-5 h-[120px]">
+              <div className="w-24 h-5 skeleton mb-3"></div>
+              <div className="w-3/4 h-4 skeleton mb-2"></div>
+              <div className="w-1/2 h-3 skeleton"></div>
+            </div>
+          ))}
         </div>
       )}
 
       {!loading && updates.length === 0 && (
         <Card className="text-center py-12 flex flex-col items-center">
-          <span className="material-symbols-outlined text-[48px] text-outline mb-4">notifications_off</span>
-          <p className="text-on-surface-variant font-body-md">No updates yet. Create one to get started!</p>
+          <span className="material-symbols-outlined text-[48px] text-text-subdued mb-3">notifications_off</span>
+          <p className="text-text-muted text-[14px]">No updates yet. Create one to get started!</p>
         </Card>
       )}
 
-      <div className="space-y-6 stagger">
+      <div className="space-y-3 stagger">
         {updates.map((update) => (
-          <Card key={update.update_id} className="animate-fade-in-up relative border-l-4" style={{
-            borderLeftColor: update.category === 'exam' ? 'var(--color-tertiary)' : 
-                             update.category === 'schedule' ? 'var(--color-error)' : 
-                             update.category === 'academic' ? 'var(--color-primary)' : 'var(--color-outline-variant)'
+          <Card key={update.update_id} className="animate-fade-in-up !p-4 border-l-[3px]" style={{
+            borderLeftColor: update.category === 'exam' ? '#ea580c' : 
+                             update.category === 'schedule' ? '#dc2626' : 
+                             update.category === 'academic' ? '#2663ed' : '#e2e8f0'
           }}>
             <div className="flex justify-between items-start mb-2">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <Badge variant={getBadgeVariant(update.category) as any}>{update.category}</Badge>
-                <h3 className="font-headline-md text-[18px] text-on-surface leading-tight">{update.title}</h3>
+                <h3 className="text-[14px] font-semibold text-text-dark">{update.title}</h3>
               </div>
-              <span className="font-label-sm text-outline">
+              <span className="text-[11px] text-text-subdued shrink-0 ml-4">
                 {new Date(update.created_at).toLocaleDateString('en-US', {
                   month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 })}
               </span>
             </div>
-            <p className="text-on-surface-variant font-body-md mb-6">{update.message}</p>
+            <p className="text-text-muted text-[13px] mb-3">{update.message}</p>
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={() => handleEdit(update)}>
+              <Button variant="ghost" size="sm" onClick={() => handleEdit(update)}>
+                <span className="material-symbols-outlined text-[14px]">edit</span>
                 Edit
               </Button>
               <Button variant="danger" size="sm" onClick={() => handleDelete(update.update_id)}>
+                <span className="material-symbols-outlined text-[14px]">delete</span>
                 Delete
               </Button>
             </div>

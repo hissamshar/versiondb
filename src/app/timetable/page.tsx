@@ -1,105 +1,154 @@
-'use client';
-
-import React, { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React from 'react';
+import { cookies } from 'next/headers';
+import pool from '@/lib/db';
 import { PageHeader } from '../components/layout/PageHeader';
-import { RollLookup } from '../components/RollLookup';
-import { TimetableGrid } from '../components/TimetableGrid';
 import { Card } from '../components/ui/Card';
-import { SkeletonCard } from '../components/ui/Skeleton';
+import { Badge } from '../components/ui/Badge';
 
-function TimetableContent() {
-  const searchParams = useSearchParams();
-  const roll = searchParams.get('roll');
-  const [student, setStudent] = React.useState<any>(null);
-  const [schedule, setSchedule] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(!!roll);
-  const [error, setError] = React.useState('');
-
-  React.useEffect(() => {
-    if (!roll) return;
-    setLoading(true);
-    fetch(`/api/students?roll=${encodeURIComponent(roll)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) setError(data.error);
-        else {
-          setStudent(data.student);
-          setSchedule(data.schedule || []);
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        setError('Failed to fetch timetable');
-        setLoading(false);
-      });
-  }, [roll]);
-
-  return (
-    <>
-      <div className="mb-10 max-w-md">
-        <RollLookup targetPage="timetable" />
-      </div>
-
-      {loading && (
-        <div aria-busy="true">
-          <SkeletonCard />
-        </div>
-      )}
-
-      {error && (
-        <div role="alert" className="bg-error-container/10 border border-error/20 text-error p-4 rounded-lg font-body-md">
-          {error}
-        </div>
-      )}
-
-      {!roll && !loading && !error && (
-        <Card className="text-center py-12 flex flex-col items-center justify-center">
-          <span className="material-symbols-outlined text-[48px] text-outline mb-4">calendar_view_week</span>
-          <p className="text-on-surface-variant font-body-md text-lg">Enter your roll number above to view your timetable.</p>
-        </Card>
-      )}
-
-      {student && !loading && (
-        <div className="animate-fade-in-up">
-          <Card className="mb-8 flex flex-row items-center gap-6">
-            <div className="hidden sm:flex h-16 w-16 bg-surface-variant rounded-full items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-[32px]">person</span>
-            </div>
-            <div>
-              <h2 className="font-headline-md text-on-surface">{student.name}</h2>
-              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2 font-label-md text-on-surface-variant">
-                <span><strong className="text-on-surface">Roll:</strong> {student.roll_number}</span>
-                <span><strong className="text-on-surface">Semester:</strong> {student.semester}</span>
-                <span><strong className="text-on-surface">Section:</strong> {student.section}</span>
-                <span><strong className="text-on-surface">Classes:</strong> {schedule.length} slots</span>
-              </div>
-            </div>
-          </Card>
-
-          {schedule.length > 0 ? (
-            <TimetableGrid schedule={schedule} />
-          ) : (
-            <Card className="text-center py-12">
-              <p className="text-on-surface-variant font-body-md">No class schedule found for this student.</p>
-            </Card>
-          )}
-        </div>
-      )}
-    </>
-  );
+async function getSchedule(studentId: number) {
+  try {
+    const res = await pool.query(
+      `SELECT cs.schedule_id, c.course_code, c.course_name, cs.day_of_week, 
+              cs.start_time, cs.end_time, cs.section, f.name as faculty_name, r.room_name
+       FROM course_enrollment ce
+       JOIN class_schedule cs ON ce.course_id = cs.course_id AND ce.section = cs.section
+       JOIN courses c ON cs.course_id = c.course_id
+       LEFT JOIN faculty f ON cs.faculty_id = f.faculty_id
+       LEFT JOIN rooms r ON cs.room_id = r.room_id
+       WHERE ce.student_id = $1
+       ORDER BY 
+         CASE cs.day_of_week 
+           WHEN 'Mon' THEN 1 WHEN 'Tue' THEN 2 WHEN 'Wed' THEN 3 
+           WHEN 'Thu' THEN 4 WHEN 'Fri' THEN 5 ELSE 6 
+         END,
+         cs.start_time ASC`,
+      [studentId]
+    );
+    return res.rows;
+  } catch (err) {
+    console.error('Schedule fetch error:', err);
+    return [];
+  }
 }
 
-export default function TimetablePage() {
+const formatTime = (t: string) => {
+  const [h, m] = t.split(':');
+  const hour = parseInt(h);
+  return `${hour > 12 ? hour - 12 : hour}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+};
+
+const dayColors: Record<string, string> = {
+  Mon: 'bg-primary-10 border-primary/20 text-primary',
+  Tue: 'bg-green-light border-green/20 text-green',
+  Wed: 'bg-orange-light border-orange/20 text-orange',
+  Thu: 'bg-primary-light border-accent/20 text-accent',
+  Fri: 'bg-red-light border-red/20 text-red',
+};
+
+export default async function TimetablePage() {
+  const cookieStore = await cookies();
+  const authCookie = cookieStore.get('auth');
+  
+  let studentName = 'Student';
+  let rollNumber = '';
+  let studentId = 0;
+  let section = '';
+
+  if (authCookie) {
+    try {
+      const parsed = JSON.parse(authCookie.value);
+      studentName = parsed.name || 'Student';
+      rollNumber = parsed.roll || '';
+      studentId = parsed.id || 0;
+      section = parsed.section || '';
+    } catch { /* fallback */ }
+  }
+
+  const schedule = studentId ? await getSchedule(studentId) : [];
+
+  // Group by day
+  const grouped: Record<string, any[]> = {};
+  const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  dayOrder.forEach(d => { grouped[d] = []; });
+  schedule.forEach((cls: any) => {
+    const day = cls.day_of_week.substring(0, 3);
+    if (grouped[day]) grouped[day].push(cls);
+  });
+
   return (
     <>
       <PageHeader 
         title="Class Timetable" 
-        subtitle="Look up your weekly schedule, rooms, and faculty." 
+        subtitle="Your weekly schedule with rooms and faculty." 
       />
-      <Suspense fallback={<div aria-busy="true"><SkeletonCard /></div>}>
-        <TimetableContent />
-      </Suspense>
+
+      {/* Student Info Bar */}
+      <Card className="flex-row items-center gap-4 !p-4 mb-2 animate-fade-in-up">
+        <div className="w-10 h-10 rounded-full bg-primary-10 flex items-center justify-center text-primary font-bold text-[13px] shrink-0">
+          {studentName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[14px] font-bold text-text-dark">{studentName}</p>
+          <div className="flex flex-wrap gap-3 text-[12px] text-text-muted">
+            <span>{rollNumber}</span>
+            {section && section !== 'Unknown' && <span>Section: {section}</span>}
+            <span>{schedule.length} class slots/week</span>
+          </div>
+        </div>
+      </Card>
+
+      {schedule.length === 0 ? (
+        <Card className="text-center py-12 animate-fade-in-up">
+          <span className="material-symbols-outlined text-[48px] text-text-subdued mb-3 block">calendar_view_week</span>
+          <p className="text-text-muted text-[14px]">No class schedule found.</p>
+        </Card>
+      ) : (
+        <div className="space-y-6 animate-fade-in-up stagger" style={{ animationDelay: '50ms' }}>
+          {dayOrder.map(day => {
+            const classes = grouped[day];
+            if (classes.length === 0) return null;
+            const colors = dayColors[day] || 'bg-bg-slate border-border text-text-slate';
+            
+            return (
+              <div key={day}>
+                <div className="flex items-center gap-3 mb-3">
+                  <h3 className="text-[15px] font-bold text-text-dark font-heading">
+                    {day === 'Mon' ? 'Monday' : day === 'Tue' ? 'Tuesday' : day === 'Wed' ? 'Wednesday' : day === 'Thu' ? 'Thursday' : 'Friday'}
+                  </h3>
+                  <Badge variant="event">{classes.length} class{classes.length !== 1 ? 'es' : ''}</Badge>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {classes.map((cls: any) => (
+                    <Card key={cls.schedule_id} className={`!p-4 border-l-[3px] ${colors.split(' ').slice(1).join(' ')} !bg-bg-card`}>
+                      <div className="flex items-start justify-between mb-2">
+                        <Badge variant="default">{cls.course_code}</Badge>
+                        <span className="text-[11px] text-text-muted font-medium">{cls.section}</span>
+                      </div>
+                      <h4 className="text-[14px] font-semibold text-text-dark mt-1 leading-snug">{cls.course_name}</h4>
+                      <div className="mt-3 space-y-1.5 text-[12px] text-text-muted">
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[14px]">schedule</span>
+                          {formatTime(cls.start_time)} – {formatTime(cls.end_time)}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[14px]">location_on</span>
+                          {cls.room_name || 'TBD'}
+                        </div>
+                        {cls.faculty_name && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[14px]">person</span>
+                            {cls.faculty_name}
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }

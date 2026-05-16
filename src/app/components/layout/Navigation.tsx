@@ -4,66 +4,90 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+function useAuth() {
+  const [user, setUser] = React.useState<{ name: string; roll: string } | null>(null);
+  React.useEffect(() => {
+    try {
+      const raw = document.cookie.split('; ').find(c => c.startsWith('user_info='));
+      if (raw) {
+        const val = decodeURIComponent(raw.split('=').slice(1).join('='));
+        setUser(JSON.parse(val));
+      }
+    } catch { /* cookie is httpOnly or malformed, fallback */ }
+  }, []);
+  return user;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
+  const user = useAuth();
   
   if (pathname === '/login') return null;
 
   const navItems = [
-    { href: '/timetable', icon: 'calendar_view_week', label: 'Schedule' },
+    { href: '/', icon: 'dashboard', label: 'Dashboard' },
+    { href: '/timetable', icon: 'calendar_view_week', label: 'Timetable' },
     { href: '/exams', icon: 'assignment', label: 'Exams' },
     { href: '/calendar', icon: 'event', label: 'Calendar' },
-    { href: '/updates', icon: 'notifications', label: 'Updates' },
+    { href: '/updates', icon: 'campaign', label: 'Updates' },
   ];
 
+  const initials = user?.name
+    ? user.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()
+    : 'ST';
+
   return (
-    <nav className="bg-surface-container text-primary font-label-md text-[12px] h-screen left-0 w-64 hidden md:flex flex-col border-r border-outline-variant/20 py-[32px] sticky top-0 z-40">
-      <div className="px-[16px] mb-8">
-        <h1 className="font-headline-md text-[24px] leading-[32px] font-black text-primary">EasyTimetable</h1>
-        <p className="text-on-surface-variant font-label-md mt-1">Academic Portal</p>
+    <nav className="bg-sidebar-bg text-white h-screen left-0 w-[68px] hidden md:flex flex-col items-center py-4 sticky top-0 z-40 shrink-0">
+      {/* Logo */}
+      <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-6">
+        <span className="material-symbols-outlined text-white text-[22px]">school</span>
       </div>
-      <div className="flex-1 overflow-y-auto space-y-2 px-[16px]">
+
+      {/* Nav Icons */}
+      <div className="flex-1 flex flex-col items-center gap-1 w-full px-2">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (pathname === '/' && item.href === '/timetable');
+          const isActive = pathname === item.href;
           return (
             <Link 
               key={item.href} 
               href={item.href}
-              className={`font-medium flex items-center px-4 py-3 rounded-lg transition-all duration-200 ${
+              title={item.label}
+              className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 group relative ${
                 isActive 
-                  ? 'text-primary bg-primary/10 border-r-4 border-primary font-bold hover:bg-surface-variant translate-x-1' 
-                  : 'text-on-surface-variant hover:bg-surface-variant'
+                  ? 'bg-sidebar-active text-sidebar-text-active' 
+                  : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text-active'
               }`}
             >
-              <span className="material-symbols-outlined mr-3" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>{item.icon}</span>
-              {item.label}
+              <span 
+                className="material-symbols-outlined text-[22px]" 
+                style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
+              >
+                {item.icon}
+              </span>
+              {/* Tooltip */}
+              <span className="absolute left-full ml-3 px-2 py-1 bg-text-dark text-white text-[11px] rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                {item.label}
+              </span>
             </Link>
           );
         })}
       </div>
-      <div className="px-[16px] mt-auto pt-4 space-y-4">
-        <button className="w-full bg-primary-container text-on-primary-container font-label-md py-3 rounded-lg flex items-center justify-center hover:bg-primary transition-colors">
-          <span className="material-symbols-outlined mr-2 text-[18px]">smart_toy</span>
-          Ask Groq AI
-        </button>
-        <div className="flex items-center gap-3 px-2 pt-4 border-t border-gray-200">
-          <div className="w-8 h-8 rounded-full bg-bg-slate flex items-center justify-center text-text-slate font-bold text-[12px]">
-            AC
-          </div>
-          <div className="flex-1">
-            <p className="font-heading font-bold text-text-dark text-[14px]">Alex Chen</p>
-            <p className="font-primary text-[10px] text-text-muted">CS - Yr 3</p>
-          </div>
-          <form action="/login" method="POST" onSubmit={async (e) => {
-            e.preventDefault();
+
+      {/* User Avatar + Logout */}
+      <div className="flex flex-col items-center gap-2 mt-auto pt-3 border-t border-white/10 w-full px-2">
+        <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center text-white font-bold text-[11px] cursor-default" title={user?.name || 'Student'}>
+          {initials}
+        </div>
+        <button
+          onClick={async () => {
             await fetch('/api/logout', { method: 'POST' });
             window.location.href = '/login';
-          }}>
-            <button type="submit" className="text-text-muted hover:text-primary transition-colors">
-              <span className="material-symbols-outlined text-[18px]">logout</span>
-            </button>
-          </form>
-        </div>
+          }}
+          title="Logout"
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-sidebar-text hover:bg-sidebar-hover hover:text-red-400 transition-colors"
+        >
+          <span className="material-symbols-outlined text-[20px]">logout</span>
+        </button>
       </div>
     </nav>
   );
@@ -71,42 +95,57 @@ export function Sidebar() {
 
 export function TopAppBar() {
   const pathname = usePathname();
+  const user = useAuth();
   if (pathname === '/login') return null;
 
+  const getPageTitle = () => {
+    switch (pathname) {
+      case '/': return 'Dashboard';
+      case '/timetable': return 'Timetable';
+      case '/exams': return 'Exams';
+      case '/calendar': return 'Calendar';
+      case '/updates': return 'Updates';
+      default: return 'EasyTimetable';
+    }
+  };
+
   return (
-    <header className="bg-surface text-primary top-0 sticky border-b border-outline-variant/30 flex justify-between items-center w-full px-[16px] md:px-[32px] py-[8px] z-30">
-      <div className="flex items-center md:hidden">
-        <h1 className="font-headline-md text-[20px] font-bold text-primary">EasyTimetable</h1>
-      </div>
-      
-      {/* AI Search Bar (Desktop) */}
-      <div className="hidden md:flex flex-1 max-w-xl mx-auto items-center">
-        <div className="relative w-full group">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <span className="material-symbols-outlined text-outline group-focus-within:text-tertiary-container transition-colors">search</span>
-          </div>
-          <input 
-            className="w-full bg-surface-container-low border border-outline-variant/40 rounded-full py-2 pl-10 pr-4 font-body-md text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-tertiary-container focus:ring-1 focus:ring-tertiary-container/50 transition-all shadow-[0_0_15px_rgba(128,131,255,0.05)] focus:shadow-[0_0_20px_rgba(128,131,255,0.15)]" 
-            placeholder="Ask Groq: 'When is my next DB exam?'" 
-            type="text" 
-          />
-          <div className="absolute inset-y-0 right-0 pr-2 flex items-center">
-            <span className="bg-surface-variant text-on-surface-variant font-label-sm px-2 py-0.5 rounded border border-outline-variant/30">⌘K</span>
-          </div>
+    <header className="bg-bg-white border-b border-border sticky top-0 flex justify-between items-center w-full px-4 md:px-6 py-3 z-30">
+      <div className="flex items-center gap-3">
+        <div className="md:hidden w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+          <span className="material-symbols-outlined text-white text-[18px]">school</span>
+        </div>
+        <div>
+          <h1 className="text-[16px] font-bold text-text-dark font-heading">{getPageTitle()}</h1>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 md:gap-4 ml-auto">
-        <Link href="/updates" className="p-2 text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 rounded-full relative">
-          <span className="material-symbols-outlined">notifications_active</span>
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full border border-surface"></span>
+      {/* Search */}
+      <div className="hidden md:flex flex-1 max-w-md mx-6">
+        <div className="relative w-full">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+          <input 
+            className="w-full bg-bg-slate border border-border rounded-lg py-2 pl-9 pr-3 text-[13px] text-text-primary placeholder-text-subdued focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" 
+            placeholder="Search courses, rooms..." 
+            type="text" 
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Link href="/updates" className="relative p-2 text-text-muted hover:bg-bg-slate transition-colors rounded-lg">
+          <span className="material-symbols-outlined text-[20px]">notifications</span>
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red rounded-full border-2 border-bg-white"></span>
         </Link>
-        <button className="p-2 text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 rounded-full md:hidden">
-          <span className="material-symbols-outlined">search</span>
-        </button>
-        <button className="p-2 text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 rounded-full hidden md:block">
-          <span className="material-symbols-outlined">account_circle</span>
-        </button>
+        <div className="hidden md:flex items-center gap-2 ml-2 pl-3 border-l border-border">
+          <div className="w-8 h-8 rounded-full bg-primary-10 flex items-center justify-center text-primary font-bold text-[11px]">
+            {user?.name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || 'ST'}
+          </div>
+          <div className="text-right">
+            <p className="text-[12px] font-semibold text-text-dark leading-tight">{user?.name || 'Student'}</p>
+            <p className="text-[10px] text-text-muted leading-tight">{user?.roll || ''}</p>
+          </div>
+        </div>
       </div>
     </header>
   );
@@ -118,28 +157,29 @@ export function BottomNav() {
   if (pathname === '/login') return null;
 
   const navItems = [
+    { href: '/', icon: 'dashboard', label: 'Home' },
     { href: '/timetable', icon: 'calendar_view_week', label: 'Schedule' },
     { href: '/exams', icon: 'assignment', label: 'Exams' },
     { href: '/calendar', icon: 'event', label: 'Calendar' },
-    { href: '/updates', icon: 'notifications', label: 'Updates' },
+    { href: '/updates', icon: 'campaign', label: 'Updates' },
   ];
 
   return (
-    <nav className="bg-surface-container-high/90 backdrop-blur-md text-primary font-label-sm md:hidden border-t border-outline-variant/30 shadow-lg fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 pb-6">
+    <nav className="bg-bg-white/95 backdrop-blur-md md:hidden border-t border-border fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       {navItems.map((item) => {
-        const isActive = pathname === item.href || (pathname === '/' && item.href === '/timetable');
+        const isActive = pathname === item.href;
         return (
           <Link 
             key={item.href} 
             href={item.href} 
-            className={`flex flex-col items-center justify-center transition-transform ${
+            className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
               isActive 
-                ? 'bg-primary-container/20 text-primary rounded-xl px-4 py-1 scale-95' 
-                : 'text-on-surface-variant'
+                ? 'text-primary' 
+                : 'text-text-muted'
             }`}
           >
-            <span className="material-symbols-outlined" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>{item.icon}</span>
-            <span className="mt-1 text-[10px]">{item.label}</span>
+            <span className="material-symbols-outlined text-[22px]" style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>{item.icon}</span>
+            <span className="text-[10px] font-medium">{item.label}</span>
           </Link>
         );
       })}

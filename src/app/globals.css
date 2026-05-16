@@ -1,32 +1,51 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* AcademyNC Colors */
+  /* ─── AcademyNC Primary Palette ─── */
   --color-primary: #2663ed;
   --color-primary-hover: #1d4ed8;
+  --color-primary-light: #dbeafe;
+  --color-primary-10: rgba(38, 99, 237, 0.1);
   --color-accent: #6366f1;
   --color-accent-dark: #4338ca;
-  
+  --color-green: #047857;
+  --color-green-light: #d1fae5;
+  --color-orange: #ea580c;
+  --color-orange-light: #ffedd5;
+  --color-red: #dc2626;
+  --color-red-light: #fee2e2;
+
+  /* ─── Text Hierarchy ─── */
   --color-text-primary: #020817;
   --color-text-dark: #0f172a;
   --color-text-slate: #334155;
   --color-text-muted: #64748b;
-  --color-text-subdued: #4b5563;
+  --color-text-subdued: #94a3b8;
   --color-text-white: #ffffff;
-  
-  --color-bg-white: #ffffff;
-  --color-bg-app: #eef2ff;
-  --color-bg-slate: #f1f5f9;
-  --color-bg-blue-tint: rgba(59, 130, 246, 0.1);
-  --color-bg-light-blue: #dbeafe;
-  --color-bg-overlay: rgba(0, 0, 0, 0.1);
-  
-  --color-success: #047857;
-  --color-warning: #ea580c;
 
-  /* Fonts */
-  --font-primary: var(--font-inter), sans-serif;
-  --font-heading: var(--font-plus-jakarta-sans), sans-serif;
+  /* ─── Surfaces & Backgrounds ─── */
+  --color-bg-white: #ffffff;
+  --color-bg-app: #f8fafc;
+  --color-bg-card: #ffffff;
+  --color-bg-slate: #f1f5f9;
+  --color-bg-blue-tint: rgba(59, 130, 246, 0.08);
+  --color-bg-light-blue: #dbeafe;
+  --color-bg-hover: #f1f5f9;
+
+  /* ─── Borders ─── */
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+
+  /* ─── Sidebar ─── */
+  --color-sidebar-bg: #1e1b4b;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --color-sidebar-active: rgba(99, 102, 241, 0.2);
+  --color-sidebar-text: rgba(255, 255, 255, 0.7);
+  --color-sidebar-text-active: #ffffff;
+
+  /* ─── Fonts ─── */
+  --font-primary: var(--font-inter), system-ui, sans-serif;
+  --font-heading: var(--font-plus-jakarta-sans), system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -37,20 +56,36 @@ body {
   color: var(--color-text-primary);
   font-family: var(--font-primary);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* ─── Animations ─── */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
 
-.animate-fade-in-up { animation: fadeInUp 400ms ease-out forwards; }
+.animate-fade-in-up { animation: fadeInUp 350ms ease-out both; }
 
 .stagger > *:nth-child(1) { animation-delay: 0ms; }
-.stagger > *:nth-child(2) { animation-delay: 60ms; }
-.stagger > *:nth-child(3) { animation-delay: 120ms; }
-.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(2) { animation-delay: 50ms; }
+.stagger > *:nth-child(3) { animation-delay: 100ms; }
+.stagger > *:nth-child(4) { animation-delay: 150ms; }
+.stagger > *:nth-child(5) { animation-delay: 200ms; }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--color-bg-app); }
-::-webkit-scrollbar-thumb { background: var(--color-text-muted); border-radius: 9999px; }
+.skeleton {
+  background: linear-gradient(90deg, var(--color-bg-slate) 25%, #e2e8f0 50%, var(--color-bg-slate) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
