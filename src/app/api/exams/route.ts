@@ -1,59 +1,46 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
-// GET /api/exams?roll=XXXX
-// Returns exam schedule for a student
-export async function GET(request: NextRequest) {
-  const roll = request.nextUrl.searchParams.get('roll');
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const roll = searchParams.get('roll');
 
   if (!roll) {
-    return NextResponse.json(
-      { error: 'Roll number is required. Use ?roll=23P-0001' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Roll number is required' }, { status: 400 });
   }
 
   try {
-    // Fetch student
-    const studentResult = await pool.query(
-      `SELECT student_id, roll_number, name FROM public.students WHERE roll_number = $1`,
+    // Get student info first
+    const studentRes = await pool.query(
+      'SELECT student_id, roll_number, name FROM students WHERE roll_number = $1',
       [roll]
     );
 
-    if (studentResult.rows.length === 0) {
-      return NextResponse.json(
-        { error: 'Student not found' },
-        { status: 404 }
-      );
+    if (studentRes.rows.length === 0) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    const student = studentResult.rows[0];
+    const student = studentRes.rows[0];
 
-    // Fetch exams for enrolled courses
-    const examsResult = await pool.query(
-      `SELECT 
-         es.exam_id, es.exam_type, es.exam_date, es.start_time, es.end_time,
-         es.section AS exam_section, es.semester,
-         c.course_id, c.course_code, c.course_name, c.credit_hours,
-         r.room_code, r.room_name
-       FROM public.course_enrollment ce
-       JOIN public.exam_schedule es ON es.course_id = ce.course_id AND es.semester = ce.semester
-       JOIN public.courses c ON c.course_id = ce.course_id
-       LEFT JOIN public.rooms r ON r.room_id = es.room_id
-       WHERE ce.student_id = $1 AND ce.status = 'ENROLLED'
-       ORDER BY es.exam_date, es.start_time`,
+    // Get exam schedule
+    const examsRes = await pool.query(
+      `SELECT es.exam_id, c.course_code, c.course_name, es.exam_type, 
+              es.exam_date, es.start_time, es.end_time, r.room_code, es.exam_section as section
+       FROM course_enrollment ce
+       JOIN exam_schedule es ON ce.course_id = es.course_id
+       JOIN courses c ON es.course_id = c.course_id
+       LEFT JOIN rooms r ON es.room_id = r.room_id
+       WHERE ce.student_id = $1 AND (es.exam_section IS NULL OR es.exam_section = ce.section)
+       ORDER BY es.exam_date ASC, es.start_time ASC`,
       [student.student_id]
     );
 
     return NextResponse.json({
       student,
-      exams: examsResult.rows,
+      exams: examsRes.rows,
     });
   } catch (error) {
     console.error('Database error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

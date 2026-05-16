@@ -1,57 +1,30 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import RollLookup from '../components/RollLookup';
-import ExamCard from '../components/ExamCard';
-
-interface Exam {
-  exam_id: number;
-  course_code: string;
-  course_name: string;
-  exam_type: string;
-  exam_date: string;
-  start_time: string;
-  end_time: string;
-  room_code: string | null;
-  exam_section: string | null;
-}
-
-interface Student {
-  student_id: number;
-  roll_number: string;
-  name: string;
-}
-
-export default function ExamsPage() {
-  return (
-    <Suspense fallback={<div className="loading"><div className="loading-spinner" /><p>Loading...</p></div>}>
-      <ExamsContent />
-    </Suspense>
-  );
-}
+import { Container } from '../components/layout/Container';
+import { PageHeader } from '../components/layout/PageHeader';
+import { RollLookup } from '../components/RollLookup';
+import { ExamCard } from '../components/ExamCard';
+import { Card } from '../components/ui/Card';
+import { SkeletonCard } from '../components/ui/Skeleton';
 
 function ExamsContent() {
   const searchParams = useSearchParams();
   const roll = searchParams.get('roll');
-  const [student, setStudent] = useState<Student | null>(null);
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [student, setStudent] = React.useState<any>(null);
+  const [exams, setExams] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(!!roll);
+  const [error, setError] = React.useState('');
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!roll) return;
     setLoading(true);
-    setError('');
-
     fetch(`/api/exams?roll=${encodeURIComponent(roll)}`)
-      .then((res) => res.json())
-      .then((data) => {
+      .then(res => res.json())
+      .then(data => {
         if (data.error) {
           setError(data.error);
-          setStudent(null);
-          setExams([]);
         } else {
           setStudent(data.student);
           setExams(data.exams || []);
@@ -64,81 +37,117 @@ function ExamsContent() {
       });
   }, [roll]);
 
-  const examTypes = ['all', ...new Set(exams.map((e) => e.exam_type))];
-  const filtered = filter === 'all' ? exams : exams.filter((e) => e.exam_type === filter);
+  // Group exams
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const upcomingExams = exams.filter(e => new Date(e.exam_date) >= today);
+  const pastExams = exams.filter(e => new Date(e.exam_date) < today);
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1>Exam Schedule</h1>
-        <p>Enter your roll number to view your exam datesheet</p>
-      </div>
-
-      <div style={{ maxWidth: 600, marginBottom: '2rem' }}>
+    <>
+      <div className="mb-10 max-w-md">
         <RollLookup targetPage="exams" />
       </div>
 
       {loading && (
-        <div className="loading">
-          <div className="loading-spinner" />
-          <p>Loading exam schedule...</p>
+        <div aria-busy="true" className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       )}
 
-      {error && <div className="error-box">{error}</div>}
+      {error && (
+        <div role="alert" className="bg-error/10 border border-error/20 text-error p-4 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {!roll && !loading && !error && (
+        <Card className="text-center py-12">
+          <span className="text-4xl mb-4 block">📭</span>
+          <p className="text-zinc-400 text-lg">Enter your roll number above to view your exams.</p>
+        </Card>
+      )}
 
       {student && !loading && (
-        <div className="student-card">
-          <div className="student-avatar">📝</div>
-          <div className="student-info">
-            <h2>{student.roll_number}</h2>
-            <div className="student-details">
-              <span className="student-detail">
-                Total exams: <strong>{exams.length}</strong>
-              </span>
+        <div className="animate-fade-in-up">
+          <Card className="mb-8 flex items-center gap-6">
+            <div className="hidden sm:flex h-16 w-16 bg-white/5 rounded-full items-center justify-center text-2xl">📝</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">{student.name}</h2>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2 text-sm text-zinc-400">
+                <span><strong className="text-zinc-300">Roll:</strong> {student.roll_number}</span>
+                <span><strong className="text-zinc-300">Total Exams:</strong> {exams.length}</span>
+              </div>
             </div>
-          </div>
+          </Card>
+
+          {exams.length > 0 ? (
+            <div className="space-y-12">
+              {upcomingExams.length > 0 && (
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-4 border-b border-white/10 pb-2">Upcoming Exams</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {upcomingExams.map(exam => (
+                      <ExamCard
+                        key={exam.exam_id}
+                        courseName={exam.course_name}
+                        courseCode={exam.course_code}
+                        date={exam.exam_date}
+                        time={exam.start_time}
+                        room={exam.room_code}
+                        duration={`${(new Date(`1970-01-01T${exam.end_time}`).getTime() - new Date(`1970-01-01T${exam.start_time}`).getTime()) / 60000} min`}
+                        type={exam.exam_type}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {pastExams.length > 0 && (
+                <div>
+                  <h3 className="text-xl font-bold text-zinc-500 mb-4 border-b border-white/10 pb-2">Past Exams</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-60">
+                    {pastExams.map(exam => (
+                      <ExamCard
+                        key={exam.exam_id}
+                        courseName={exam.course_name}
+                        courseCode={exam.course_code}
+                        date={exam.exam_date}
+                        time={exam.start_time}
+                        room={exam.room_code}
+                        duration={`${(new Date(`1970-01-01T${exam.end_time}`).getTime() - new Date(`1970-01-01T${exam.start_time}`).getTime()) / 60000} min`}
+                        type={exam.exam_type}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Card className="text-center py-12">
+              <p className="text-zinc-400">No exams scheduled for this student.</p>
+            </Card>
+          )}
         </div>
       )}
+    </>
+  );
+}
 
-      {exams.length > 0 && (
-        <>
-          <div className="filter-bar">
-            {examTypes.map((type) => (
-              <button
-                key={type}
-                className={`filter-btn ${filter === type ? 'filter-btn-active' : ''}`}
-                onClick={() => setFilter(type)}
-              >
-                {type === 'all' ? 'All Exams' : type}
-              </button>
-            ))}
-          </div>
-
-          <div className="exam-grid">
-            {filtered.map((exam) => (
-              <ExamCard
-                key={exam.exam_id}
-                courseCode={exam.course_code}
-                courseName={exam.course_name}
-                examType={exam.exam_type}
-                examDate={exam.exam_date}
-                startTime={exam.start_time}
-                endTime={exam.end_time}
-                roomCode={exam.room_code || undefined}
-                section={exam.exam_section || undefined}
-              />
-            ))}
-          </div>
-        </>
-      )}
-
-      {student && !loading && exams.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-state-icon">📭</div>
-          <p>No exams found for this student.</p>
-        </div>
-      )}
-    </div>
+export default function ExamsPage() {
+  return (
+    <Container className="py-16">
+      <PageHeader 
+        title="Exam Schedule" 
+        subtitle="View your personalized datesheet and seating plan." 
+      />
+      <Suspense fallback={
+        <div aria-busy="true"><SkeletonCard /></div>
+      }>
+        <ExamsContent />
+      </Suspense>
+    </Container>
   );
 }

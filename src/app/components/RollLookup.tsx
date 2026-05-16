@@ -1,67 +1,91 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Input } from './ui/Input';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { SkeletonCard } from './ui/Skeleton';
 
-interface RollLookupProps {
-  targetPage: 'timetable' | 'exams';
-  placeholder?: string;
-}
-
-export default function RollLookup({ targetPage, placeholder }: RollLookupProps) {
+export const RollLookup = ({ targetPage }: { targetPage: 'timetable' | 'exams' }) => {
   const [roll, setRoll] = useState('');
-  const [error, setError] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [student, setStudent] = useState<any>(null);
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = roll.trim().toUpperCase();
+    if (!roll.trim()) return;
 
-    if (!trimmed) {
-      setError('Please enter your roll number');
-      return;
+    setStatus('loading');
+    setErrorMsg('');
+
+    try {
+      const res = await fetch(`/api/students?roll=${encodeURIComponent(roll.trim())}`);
+      const data = await res.json();
+      
+      if (data.error) {
+        setStatus('error');
+        setErrorMsg(data.error);
+        return;
+      }
+      
+      setStudent(data.student);
+      setStatus('success');
+      
+      // Navigate to the target page with roll parameter
+      router.push(`/${targetPage}?roll=${encodeURIComponent(roll.trim())}`);
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg('Network error. Please try again.');
     }
-
-    // Basic validation for FAST-NU roll format
-    if (!/^\d{2}[A-Z]-\d{4}$/.test(trimmed)) {
-      setError('Invalid format. Use format like 23P-0001');
-      return;
-    }
-
-    setError('');
-    router.push(`/${targetPage}?roll=${encodeURIComponent(trimmed)}`);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="roll-lookup-form">
-      <div className="roll-lookup-input-group">
-        <div className="roll-lookup-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-        </div>
-        <input
-          type="text"
+    <div className="w-full max-w-md">
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <label htmlFor="roll-input" className="sr-only">Roll Number</label>
+        <Input
           id="roll-input"
           value={roll}
-          onChange={(e) => {
-            setRoll(e.target.value);
-            setError('');
-          }}
-          placeholder={placeholder || 'Enter roll number (e.g. 23P-0001)'}
-          className="roll-lookup-input"
-          autoComplete="off"
+          onChange={(e) => setRoll(e.target.value)}
+          placeholder="Enter roll number (e.g. 21i-1234)"
+          disabled={status === 'loading'}
         />
-        <button type="submit" className="roll-lookup-btn" id="roll-lookup-submit">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <span>Look Up</span>
-        </button>
+        <Button type="submit" disabled={status === 'loading'} aria-label="Lookup Roll Number">
+          Lookup
+        </Button>
+      </form>
+
+      <div className="mt-6" aria-live="polite">
+        {status === 'loading' && (
+          <div aria-busy="true">
+            <SkeletonCard />
+          </div>
+        )}
+
+        {status === 'error' && (
+          <div role="alert" className="bg-error/10 border border-error/20 text-error p-4 rounded-lg flex justify-between items-center">
+            <span>{errorMsg}</span>
+            <button onClick={() => setStatus('idle')} className="text-sm underline hover:text-white transition-colors">
+              Retry
+            </button>
+          </div>
+        )}
+
+        {status === 'success' && student && (
+          <Card className="stagger animate-fade-in-up">
+            <h3 className="text-xl font-bold text-white">{student.name}</h3>
+            <p className="font-mono text-zinc-400 mt-1">{student.roll_number}</p>
+            <div className="mt-4 flex flex-wrap gap-2 text-sm text-zinc-300">
+              <span className="bg-white/5 px-2 py-1 rounded-md">Sem: {student.semester}</span>
+              <span className="bg-white/5 px-2 py-1 rounded-md">Sec: {student.section}</span>
+              <span className="bg-white/5 px-2 py-1 rounded-md">{student.department}</span>
+            </div>
+          </Card>
+        )}
       </div>
-      {error && <p className="roll-lookup-error">{error}</p>}
-    </form>
+    </div>
   );
-}
+};

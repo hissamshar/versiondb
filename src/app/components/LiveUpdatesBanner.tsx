@@ -1,88 +1,42 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
-interface Update {
-  update_id: number;
-  title: string;
-  message: string;
-  category: string;
-  created_at: string;
-}
-
-export default function LiveUpdatesBanner() {
-  const [updates, setUpdates] = useState<Update[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
+export const LiveUpdatesBanner = () => {
+  const [updates, setUpdates] = useState<any[]>([]);
 
   useEffect(() => {
     fetch('/api/updates')
       .then((res) => res.json())
       .then((data) => {
-        if (data.updates) {
-          setUpdates(data.updates.slice(0, 5));
-        }
-        setLoading(false);
+        if (data.updates) setUpdates(data.updates);
       })
-      .catch(() => setLoading(false));
+      .catch(console.error);
   }, []);
-
-  useEffect(() => {
-    if (updates.length <= 1) return;
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % updates.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [updates.length]);
-
-  if (loading) {
-    return (
-      <div className="live-banner">
-        <div className="live-banner-pulse">
-          <span className="live-dot"></span>
-          <span>Loading updates...</span>
-        </div>
-      </div>
-    );
-  }
 
   if (updates.length === 0) return null;
 
-  const current = updates[currentIndex];
-
-  const categoryIcons: Record<string, string> = {
-    academic: '📚',
-    schedule: '📅',
-    exam: '📝',
-    general: '📢',
-  };
-
   return (
-    <div className="live-banner" id="live-updates-banner">
-      <div className="live-banner-content">
-        <div className="live-banner-label">
-          <span className="live-dot"></span>
-          <span>LIVE</span>
+    <div 
+      className="sticky top-16 z-30 h-10 bg-amber-500/10 border-b border-amber-500/20 text-amber-300 overflow-hidden flex items-center"
+      aria-live="polite"
+    >
+      <div className="px-4 shrink-0 font-bold tracking-widest text-xs flex items-center gap-2 border-r border-amber-500/20 h-full bg-black/50 z-10">
+        <div className="live-dot" />
+        LIVE
+      </div>
+      
+      <div className="flex-1 overflow-hidden relative h-full">
+        <div className="ticker-track absolute whitespace-nowrap h-full flex items-center">
+          {[...updates, ...updates, ...updates].map((update, i) => (
+            <React.Fragment key={`${update.id}-${i}`}>
+              <span className="px-4 font-medium">{update.title}:</span>
+              <span className="opacity-80 pr-8">{update.content}</span>
+              <span className="pr-8 opacity-40">•</span>
+            </React.Fragment>
+          ))}
         </div>
-        <div className="live-banner-text">
-          <span className="live-banner-icon">{categoryIcons[current.category] || '📢'}</span>
-          <strong>{current.title}</strong>
-          <span className="live-banner-separator">—</span>
-          <span>{current.message}</span>
-        </div>
-        {updates.length > 1 && (
-          <div className="live-banner-dots">
-            {updates.map((_, i) => (
-              <button
-                key={i}
-                className={`live-banner-dot-btn ${i === currentIndex ? 'active' : ''}`}
-                onClick={() => setCurrentIndex(i)}
-                aria-label={`Show update ${i + 1}`}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
-}
+};

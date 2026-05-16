@@ -1,18 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-
-interface Update {
-  update_id: number;
-  title: string;
-  message: string;
-  category: string;
-  created_at: string;
-  updated_at: string;
-}
+import React, { useState, useEffect, useCallback } from 'react';
+import { Container } from '../components/layout/Container';
+import { PageHeader } from '../components/layout/PageHeader';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Badge } from '../components/ui/Badge';
+import { SkeletonCard } from '../components/ui/Skeleton';
 
 export default function UpdatesPage() {
-  const [updates, setUpdates] = useState<Update[]>([]);
+  const [updates, setUpdates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -20,8 +18,8 @@ export default function UpdatesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formTitle, setFormTitle] = useState('');
-  const [formMessage, setFormMessage] = useState('');
-  const [formCategory, setFormCategory] = useState('general');
+  const [formContent, setFormContent] = useState('');
+  const [formType, setFormType] = useState('general');
   const [submitting, setSubmitting] = useState(false);
 
   const fetchUpdates = useCallback(() => {
@@ -43,8 +41,8 @@ export default function UpdatesPage() {
 
   const resetForm = () => {
     setFormTitle('');
-    setFormMessage('');
-    setFormCategory('general');
+    setFormContent('');
+    setFormType('general');
     setEditingId(null);
     setShowForm(false);
   };
@@ -61,14 +59,13 @@ export default function UpdatesPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             title: formTitle,
-            message: formMessage,
-            category: formCategory,
+            content: formContent,
+            type: formType,
           }),
         });
         const data = await res.json();
-        if (data.error) {
-          setError(data.error);
-        } else {
+        if (data.error) setError(data.error);
+        else {
           fetchUpdates();
           resetForm();
         }
@@ -79,14 +76,13 @@ export default function UpdatesPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             title: formTitle,
-            message: formMessage,
-            category: formCategory,
+            content: formContent,
+            type: formType,
           }),
         });
         const data = await res.json();
-        if (data.error) {
-          setError(data.error);
-        } else {
+        if (data.error) setError(data.error);
+        else {
           fetchUpdates();
           resetForm();
         }
@@ -97,12 +93,14 @@ export default function UpdatesPage() {
     setSubmitting(false);
   };
 
-  const handleEdit = (update: Update) => {
+  const handleEdit = (update: any) => {
     setFormTitle(update.title);
-    setFormMessage(update.message);
-    setFormCategory(update.category);
-    setEditingId(update.update_id);
+    setFormContent(update.content);
+    setFormType(update.type);
+    setEditingId(update.id);
     setShowForm(true);
+    // Scroll to top where form will appear
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: number) => {
@@ -110,153 +108,142 @@ export default function UpdatesPage() {
 
     try {
       const res = await fetch(`/api/updates/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.error) {
-        setError(data.error);
-      } else {
+      if (res.status === 204) {
         fetchUpdates();
+      } else {
+        const data = await res.json();
+        if (data.error) setError(data.error);
       }
     } catch {
       setError('Failed to delete update');
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const categoryIcons: Record<string, string> = {
-    academic: '📚',
-    schedule: '📅',
-    exam: '📝',
-    general: '📢',
+  const getBadgeVariant = (type: string) => {
+    const map: Record<string, string> = {
+      academic: 'lecture',
+      schedule: 'cancelled',
+      exam: 'exam',
+      general: 'holiday',
+    };
+    return map[type] || 'lecture';
   };
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1>Live Updates</h1>
-        <p>University announcements and schedule changes</p>
+    <Container className="py-16">
+      <PageHeader 
+        title="Live Updates" 
+        subtitle="University announcements and schedule changes" 
+      />
+
+      <div className="mb-10 flex justify-between items-center">
+        <h2 className="text-xl font-bold text-white">All Updates</h2>
+        {!showForm && (
+          <Button onClick={() => setShowForm(true)}>+ New Update</Button>
+        )}
       </div>
 
-      <div style={{ marginBottom: '1.5rem' }}>
-        <button
-          className="btn-primary"
-          onClick={() => { resetForm(); setShowForm(true); }}
-          id="create-update-btn"
-        >
-          + New Update
-        </button>
-      </div>
-
-      {error && <div className="error-box">{error}</div>}
-
-      {/* CREATE / EDIT MODAL */}
-      {showForm && (
-        <div className="modal-overlay" onClick={() => resetForm()}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{editingId ? 'Edit Update' : 'Create Update'}</h2>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label className="form-label" htmlFor="update-title">Title</label>
-                <input
-                  id="update-title"
-                  className="form-input"
-                  type="text"
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder="Update title"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="update-message">Message</label>
-                <textarea
-                  id="update-message"
-                  className="form-textarea"
-                  value={formMessage}
-                  onChange={(e) => setFormMessage(e.target.value)}
-                  placeholder="Update message"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="update-category">Category</label>
-                <select
-                  id="update-category"
-                  className="form-select"
-                  value={formCategory}
-                  onChange={(e) => setFormCategory(e.target.value)}
-                >
-                  <option value="general">General</option>
-                  <option value="academic">Academic</option>
-                  <option value="schedule">Schedule</option>
-                  <option value="exam">Exam</option>
-                </select>
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={resetForm}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary" disabled={submitting}>
-                  {submitting ? 'Saving...' : editingId ? 'Save Changes' : 'Create'}
-                </button>
-              </div>
-            </form>
-          </div>
+      {error && (
+        <div role="alert" className="mb-8 bg-error/10 border border-error/20 text-error p-4 rounded-lg">
+          {error}
         </div>
       )}
 
+      {showForm && (
+        <Card className="mb-12 animate-fade-in-up border-white/20">
+          <h3 className="text-xl font-bold text-white mb-4">
+            {editingId ? 'Edit Update' : 'Create New Update'}
+          </h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium text-zinc-400 mb-1">Title</label>
+              <Input
+                id="title"
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                placeholder="Enter title"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="content" className="block text-sm font-medium text-zinc-400 mb-1">Content</label>
+              <textarea
+                id="content"
+                className="w-full rounded-lg py-3 px-4 bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/8 transition-colors min-h-[120px]"
+                value={formContent}
+                onChange={(e) => setFormContent(e.target.value)}
+                placeholder="Enter update content"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="type" className="block text-sm font-medium text-zinc-400 mb-1">Type</label>
+              <select
+                id="type"
+                className="w-full rounded-lg py-3 px-4 bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/8 transition-colors appearance-none"
+                value={formType}
+                onChange={(e) => setFormType(e.target.value)}
+              >
+                <option value="general" className="bg-surface-2">General</option>
+                <option value="academic" className="bg-surface-2">Academic</option>
+                <option value="schedule" className="bg-surface-2">Schedule</option>
+                <option value="exam" className="bg-surface-2">Exam</option>
+              </select>
+            </div>
+            <div className="flex gap-3 justify-end pt-4">
+              <Button type="button" variant="ghost" onClick={resetForm}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Saving...' : editingId ? 'Save Changes' : 'Publish'}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
       {loading && (
-        <div className="loading">
-          <div className="loading-spinner" />
-          <p>Loading updates...</p>
+        <div aria-busy="true" className="space-y-6">
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       )}
 
       {!loading && updates.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-state-icon">📢</div>
-          <p>No updates yet. Create one to get started!</p>
-        </div>
+        <Card className="text-center py-12">
+          <span className="text-4xl mb-4 block">📢</span>
+          <p className="text-zinc-400 text-lg">No updates yet. Create one to get started!</p>
+        </Card>
       )}
 
-      <div className="updates-grid">
+      <div className="space-y-6 stagger">
         {updates.map((update) => (
-          <div key={update.update_id} className="update-card" id={`update-${update.update_id}`}>
-            <div className="update-card-header">
-              <div>
-                <span style={{ marginRight: '0.5rem' }}>
-                  {categoryIcons[update.category] || '📢'}
-                </span>
-                <span className="update-card-title">{update.title}</span>
+          <Card key={update.id} className="animate-fade-in-up">
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex items-center gap-3">
+                <Badge variant={getBadgeVariant(update.type) as any} className="capitalize">
+                  {update.type}
+                </Badge>
+                <h3 className="text-lg font-bold text-white leading-tight">{update.title}</h3>
               </div>
-              <span className="update-card-time">{formatDate(update.created_at)}</span>
+              <span className="text-sm text-zinc-500 font-mono">
+                {new Date(update.created_at).toLocaleDateString('en-US', {
+                  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                })}
+              </span>
             </div>
-            <p className="update-card-message">{update.message}</p>
-            <div className="update-card-actions">
-              <button
-                className="btn-sm btn-edit"
-                onClick={() => handleEdit(update)}
-              >
-                ✏️ Edit
-              </button>
-              <button
-                className="btn-sm btn-delete"
-                onClick={() => handleDelete(update.update_id)}
-              >
-                🗑️ Delete
-              </button>
+            <p className="text-zinc-400 mb-6">{update.content}</p>
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={() => handleEdit(update)}>
+                Edit
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => handleDelete(update.id)} className="hover:text-error hover:bg-error/10">
+                Delete
+              </Button>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
-    </div>
+    </Container>
   );
 }

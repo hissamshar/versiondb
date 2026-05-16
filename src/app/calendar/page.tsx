@@ -1,123 +1,79 @@
-'use client';
+import React from 'react';
+import pool from '@/lib/db';
+import { Container } from '../components/layout/Container';
+import { PageHeader } from '../components/layout/PageHeader';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
 
-import { useState, useEffect } from 'react';
-
-interface CalendarEvent {
-  event_id: number;
-  week: string;
-  description: string;
-  event_date: string;
-  event_day: string;
-  event_type: string;
-  semester: string;
+async function getCalendarEvents() {
+  try {
+    const res = await pool.query('SELECT * FROM academic_calendar ORDER BY event_date ASC');
+    return res.rows;
+  } catch (err) {
+    console.error('Failed to fetch calendar', err);
+    return [];
+  }
 }
 
-export default function CalendarPage() {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [filter, setFilter] = useState('all');
+export default async function CalendarPage() {
+  const events = await getCalendarEvents();
 
-  useEffect(() => {
-    fetch('/api/calendar')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) {
-          setError(data.error);
-        } else {
-          setEvents(data.events || []);
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        setError('Failed to load calendar');
-        setLoading(false);
-      });
-  }, []);
+  // Group by month
+  const grouped: Record<string, any[]> = {};
+  events.forEach(evt => {
+    const date = new Date(evt.event_date);
+    const month = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+    if (!grouped[month]) grouped[month] = [];
+    grouped[month].push(evt);
+  });
 
-  const typeList = ['all', ...new Set(events.map((e) => e.event_type))];
-  const filtered = filter === 'all' ? events : events.filter((e) => e.event_type === filter);
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return {
-      day: date.getDate(),
-      month: date.toLocaleDateString('en-US', { month: 'short' }),
-      year: date.getFullYear(),
-    };
-  };
-
-  const badgeClass = (type: string) => {
-    const map: Record<string, string> = {
-      event: 'badge-event',
-      deadline: 'badge-deadline',
-      exam: 'badge-exam',
-      holiday: 'badge-holiday',
-    };
-    return map[type] || 'badge-event';
+  const getBadgeVariant = (type: string) => {
+    if (type.toLowerCase().includes('exam')) return 'exam';
+    if (type.toLowerCase().includes('holiday')) return 'holiday';
+    if (type.toLowerCase().includes('class')) return 'lecture';
+    return 'lecture';
   };
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1>Academic Calendar</h1>
-        <p>Spring 2026 — Key dates, deadlines, exams, and holidays</p>
-      </div>
+    <Container className="py-16">
+      <PageHeader 
+        title="Academic Calendar" 
+        subtitle="Key dates, deadlines, and holidays for the semester." 
+      />
 
-      {loading && (
-        <div className="loading">
-          <div className="loading-spinner" />
-          <p>Loading calendar...</p>
+      {events.length === 0 ? (
+        <Card className="text-center py-12">
+          <p className="text-zinc-400">No events found in the calendar.</p>
+        </Card>
+      ) : (
+        <div className="space-y-12 animate-fade-in-up">
+          {Object.keys(grouped).map(month => (
+            <section key={month}>
+              <h2 className="text-2xl font-bold text-white mb-6 border-b border-white/10 pb-2">{month}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {grouped[month].map(evt => {
+                  const date = new Date(evt.event_date);
+                  return (
+                    <Card key={evt.event_id} className="flex items-center gap-6 p-4 hover:-translate-y-0.5 transition-transform">
+                      <div className="flex flex-col items-center justify-center min-w-[60px] bg-white/5 rounded-lg py-2">
+                        <span className="text-sm font-bold text-zinc-400 uppercase">{date.toLocaleString('default', { month: 'short' })}</span>
+                        <span className="text-2xl font-bold text-white leading-none">{date.getDate()}</span>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-white text-lg">{evt.description}</h3>
+                        <p className="text-sm text-zinc-400 font-mono mt-1">{evt.event_day} • Week {evt.week}</p>
+                      </div>
+                      <Badge variant={getBadgeVariant(evt.event_type)} className="capitalize hidden sm:flex shrink-0">
+                        {evt.event_type}
+                      </Badge>
+                    </Card>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
-
-      {error && <div className="error-box">{error}</div>}
-
-      {!loading && events.length > 0 && (
-        <>
-          <div className="filter-bar">
-            {typeList.map((type) => (
-              <button
-                key={type}
-                className={`filter-btn ${filter === type ? 'filter-btn-active' : ''}`}
-                onClick={() => setFilter(type)}
-              >
-                {type === 'all' ? 'All Events' : type.charAt(0).toUpperCase() + type.slice(1) + 's'}
-              </button>
-            ))}
-          </div>
-
-          <div className="calendar-grid">
-            {filtered.map((evt) => {
-              const d = formatDate(evt.event_date);
-              return (
-                <div key={evt.event_id} className="calendar-event">
-                  <div className="calendar-date">
-                    <div className="calendar-date-day">{d.day}</div>
-                    <div className="calendar-date-month">{d.month}</div>
-                  </div>
-                  <div className="calendar-event-info">
-                    <h3>{evt.description}</h3>
-                    <div className="calendar-event-week">
-                      Week {evt.week} · {evt.event_day}
-                    </div>
-                  </div>
-                  <span className={`calendar-type-badge ${badgeClass(evt.event_type)}`}>
-                    {evt.event_type}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {!loading && events.length === 0 && !error && (
-        <div className="empty-state">
-          <div className="empty-state-icon">🗓️</div>
-          <p>No calendar events found.</p>
-        </div>
-      )}
-    </div>
+    </Container>
   );
 }

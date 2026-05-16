@@ -1,57 +1,30 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import RollLookup from '../components/RollLookup';
-
-interface ScheduleSlot {
-  schedule_id: number;
-  course_code: string;
-  course_name: string;
-  day_of_week: string;
-  start_time: string;
-  end_time: string;
-  section: string;
-  faculty_name: string | null;
-  room_code: string | null;
-}
-
-interface Student {
-  student_id: number;
-  roll_number: string;
-  name: string;
-  program: string;
-  batch_year: number;
-}
-
-export default function TimetablePage() {
-  return (
-    <Suspense fallback={<div className="loading"><div className="loading-spinner" /><p>Loading...</p></div>}>
-      <TimetableContent />
-    </Suspense>
-  );
-}
+import { Container } from '../components/layout/Container';
+import { PageHeader } from '../components/layout/PageHeader';
+import { RollLookup } from '../components/RollLookup';
+import { TimetableGrid } from '../components/TimetableGrid';
+import { Card } from '../components/ui/Card';
+import { SkeletonCard } from '../components/ui/Skeleton';
 
 function TimetableContent() {
   const searchParams = useSearchParams();
   const roll = searchParams.get('roll');
-  const [student, setStudent] = useState<Student | null>(null);
-  const [schedule, setSchedule] = useState<ScheduleSlot[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [student, setStudent] = React.useState<any>(null);
+  const [schedule, setSchedule] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(!!roll);
+  const [error, setError] = React.useState('');
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!roll) return;
     setLoading(true);
-    setError('');
-
     fetch(`/api/students?roll=${encodeURIComponent(roll)}`)
-      .then((res) => res.json())
-      .then((data) => {
+      .then(res => res.json())
+      .then(data => {
         if (data.error) {
           setError(data.error);
-          setStudent(null);
-          setSchedule([]);
         } else {
           setStudent(data.student);
           setSchedule(data.schedule || []);
@@ -64,118 +37,71 @@ function TimetableContent() {
       });
   }, [roll]);
 
-  const formatTime = (timeStr: string) => {
-    const [hours, minutes] = timeStr.split(':');
-    const h = parseInt(hours);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const h12 = h % 12 || 12;
-    return `${h12}:${minutes} ${ampm}`;
-  };
-
-  // Group schedule by day
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const grouped = days
-    .map((day) => ({
-      day,
-      slots: schedule.filter((s) => s.day_of_week === day),
-    }))
-    .filter((g) => g.slots.length > 0);
-
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1>Class Timetable</h1>
-        <p>Enter your roll number to view your weekly schedule</p>
-      </div>
-
-      <div style={{ maxWidth: 600, marginBottom: '2rem' }}>
+    <>
+      <div className="mb-10 max-w-md">
         <RollLookup targetPage="timetable" />
       </div>
 
       {loading && (
-        <div className="loading">
-          <div className="loading-spinner" />
-          <p>Loading timetable...</p>
+        <div aria-busy="true">
+          <SkeletonCard />
         </div>
       )}
 
-      {error && <div className="error-box">{error}</div>}
+      {error && (
+        <div role="alert" className="bg-error/10 border border-error/20 text-error p-4 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {!roll && !loading && !error && (
+        <Card className="text-center py-12">
+          <span className="text-4xl mb-4 block">📭</span>
+          <p className="text-zinc-400 text-lg">Enter your roll number above to view your timetable.</p>
+        </Card>
+      )}
 
       {student && !loading && (
-        <div className="student-card">
-          <div className="student-avatar">🎓</div>
-          <div className="student-info">
-            <h2>{student.roll_number}</h2>
-            <div className="student-details">
-              <span className="student-detail">
-                Program: <strong>{student.program}</strong>
-              </span>
-              <span className="student-detail">
-                Batch: <strong>{student.batch_year}</strong>
-              </span>
-              <span className="student-detail">
-                Classes: <strong>{schedule.length}</strong> slots/week
-              </span>
+        <div className="animate-fade-in-up">
+          <Card className="mb-8 flex items-center gap-6">
+            <div className="hidden sm:flex h-16 w-16 bg-white/5 rounded-full items-center justify-center text-2xl">🎓</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white">{student.name}</h2>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2 text-sm text-zinc-400">
+                <span><strong className="text-zinc-300">Roll:</strong> {student.roll_number}</span>
+                <span><strong className="text-zinc-300">Semester:</strong> {student.semester}</span>
+                <span><strong className="text-zinc-300">Section:</strong> {student.section}</span>
+                <span><strong className="text-zinc-300">Classes:</strong> {schedule.length} slots</span>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </Card>
 
-      {student && !loading && grouped.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-state-icon">📭</div>
-          <p>No class schedule found for this student.</p>
+          {schedule.length > 0 ? (
+            <TimetableGrid schedule={schedule} />
+          ) : (
+            <Card className="text-center py-12">
+              <p className="text-zinc-400">No class schedule found for this student.</p>
+            </Card>
+          )}
         </div>
       )}
-
-      {grouped.length > 0 && (
-        <div className="timetable-grid">
-          {grouped.map(({ day, slots }) => (
-            <div key={day} className="timetable-day">
-              <div className="timetable-day-label">{dayFullName(day)}</div>
-              {slots.map((slot) => (
-                <div key={slot.schedule_id} className="timetable-slot">
-                  <div className="timetable-time">
-                    {formatTime(slot.start_time)}
-                    <br />
-                    <span style={{ opacity: 0.5 }}>
-                      {formatTime(slot.end_time)}
-                    </span>
-                  </div>
-                  <div className="timetable-course-info">
-                    <h4>{slot.course_name}</h4>
-                    <div className="timetable-course-code">
-                      {slot.course_code} · {slot.section}
-                    </div>
-                  </div>
-                  <div className="timetable-meta">
-                    {slot.room_code && (
-                      <span className="timetable-room">{slot.room_code}</span>
-                    )}
-                    {slot.faculty_name && (
-                      <span className="timetable-faculty">
-                        {slot.faculty_name}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    </>
   );
 }
 
-function dayFullName(d: string) {
-  const map: Record<string, string> = {
-    Mon: 'Monday',
-    Tue: 'Tuesday',
-    Wed: 'Wednesday',
-    Thu: 'Thursday',
-    Fri: 'Friday',
-    Sat: 'Saturday',
-  };
-  return map[d] || d;
+export default function TimetablePage() {
+  return (
+    <Container className="py-16">
+      <PageHeader 
+        title="Class Timetable" 
+        subtitle="Look up your weekly schedule, rooms, and faculty." 
+      />
+      <Suspense fallback={
+        <div aria-busy="true"><SkeletonCard /></div>
+      }>
+        <TimetableContent />
+      </Suspense>
+    </Container>
+  );
 }
