@@ -70,9 +70,9 @@ export default function UpdatesPage() {
 
   const handleEdit = (update: any) => {
     setFormTitle(update.title);
-    setFormContent(update.content);
-    setFormType(update.type);
-    setEditingId(update.id);
+    setFormContent(update.message);
+    setFormType(update.category);
+    setEditingId(update.update_id);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -191,14 +191,14 @@ export default function UpdatesPage() {
 
       <div className="space-y-6 stagger">
         {updates.map((update) => (
-          <Card key={update.id} className="animate-fade-in-up relative border-l-4" style={{
-            borderLeftColor: update.type === 'exam' ? 'var(--color-tertiary)' : 
-                             update.type === 'schedule' ? 'var(--color-error)' : 
-                             update.type === 'academic' ? 'var(--color-primary)' : 'var(--color-outline-variant)'
+          <Card key={update.update_id} className="animate-fade-in-up relative border-l-4" style={{
+            borderLeftColor: update.category === 'exam' ? 'var(--color-tertiary)' : 
+                             update.category === 'schedule' ? 'var(--color-error)' : 
+                             update.category === 'academic' ? 'var(--color-primary)' : 'var(--color-outline-variant)'
           }}>
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-center gap-3">
-                <Badge variant={getBadgeVariant(update.type) as any}>{update.type}</Badge>
+                <Badge variant={getBadgeVariant(update.category) as any}>{update.category}</Badge>
                 <h3 className="font-headline-md text-[18px] text-on-surface leading-tight">{update.title}</h3>
               </div>
               <span className="font-label-sm text-outline">
@@ -207,12 +207,12 @@ export default function UpdatesPage() {
                 })}
               </span>
             </div>
-            <p className="text-on-surface-variant font-body-md mb-6">{update.content}</p>
+            <p className="text-on-surface-variant font-body-md mb-6">{update.message}</p>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={() => handleEdit(update)}>
                 Edit
               </Button>
-              <Button variant="danger" size="sm" onClick={() => handleDelete(update.id)}>
+              <Button variant="danger" size="sm" onClick={() => handleDelete(update.update_id)}>
                 Delete
               </Button>
             </div>

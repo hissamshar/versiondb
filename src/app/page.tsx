@@ -66,9 +66,9 @@ export default async function Home() {
             {updates.length === 0 ? (
               <div className="text-on-surface-variant text-center py-4 font-body-md">No recent updates</div>
             ) : updates.map(update => (
-              <div key={update.id} className={`bg-surface-container-high/50 rounded-lg p-3 border-l-2 relative ${update.type === 'exam' ? 'border-tertiary' : update.type === 'academic' ? 'border-primary' : 'border-outline-variant'}`}>
+              <div key={update.update_id} className={`bg-surface-container-high/50 rounded-lg p-3 border-l-2 relative ${update.category === 'exam' ? 'border-tertiary' : update.category === 'academic' ? 'border-primary' : 'border-outline-variant'}`}>
                 <p className="font-body-md text-on-surface mb-1">{update.title}</p>
-                <p className="font-label-sm text-on-surface-variant">{update.type} • {new Date(update.created_at).toLocaleDateString()}</p>
+                <p className="font-label-sm text-on-surface-variant">{update.category} • {new Date(update.created_at).toLocaleDateString()}</p>
               </div>
             ))}
           </div>

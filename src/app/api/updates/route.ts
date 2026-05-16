@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     const res = await pool.query(
-      'INSERT INTO live_updates (title, content, type) VALUES ($1, $2, $3) RETURNING *',
+      'INSERT INTO live_updates (title, message, category) VALUES ($1, $2, $3) RETURNING *',
       [title, content, type]
     );
 

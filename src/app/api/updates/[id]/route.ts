@@ -21,7 +21,7 @@ export async function PUT(
     }
 
     const res = await pool.query(
-      'UPDATE live_updates SET title=$1, content=$2, type=$3, updated_at=NOW() WHERE id=$4 RETURNING *',
+      'UPDATE live_updates SET title=$1, message=$2, category=$3, updated_at=NOW() WHERE update_id=$4 RETURNING *',
       [title, content, type, updateId]
     );
 
@@ -48,7 +48,7 @@ export async function DELETE(
   }
 
   try {
-    const res = await pool.query('DELETE FROM live_updates WHERE id=$1', [updateId]);
+    const res = await pool.query('DELETE FROM live_updates WHERE update_id=$1', [updateId]);
 
     if (res.rowCount === 0) {
       return NextResponse.json({ error: 'Update not found' }, { status: 404 });
